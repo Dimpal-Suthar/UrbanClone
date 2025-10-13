@@ -27,19 +27,27 @@ export class AuthStore {
    * Initialize authentication listener
    */
   private async initAuth() {
-    await this.checkOnboardingStatus();
+    try {
+      await this.checkOnboardingStatus();
+    } catch (error) {
+      console.error('Onboarding check error:', error);
+    }
     
     // Listen to auth state changes
     onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await this.loadUserProfile(firebaseUser.uid);
+      try {
+        if (firebaseUser) {
+          await this.loadUserProfile(firebaseUser.uid);
+        }
+      } catch (error) {
+        console.error('Load profile error:', error);
+      } finally {
+        runInAction(() => {
+          this.user = firebaseUser;
+          this.userProfile = firebaseUser ? this.userProfile : null;
+          this.loading = false;
+        });
       }
-      
-      runInAction(() => {
-        this.user = firebaseUser;
-        this.userProfile = firebaseUser ? this.userProfile : null;
-        this.loading = false;
-      });
     });
   }
 
@@ -47,17 +55,10 @@ export class AuthStore {
    * Load user profile from Firestore
    */
   private async loadUserProfile(uid: string) {
-    try {
-      const profile = await authService.getUserProfile(uid);
-      runInAction(() => {
-        this.userProfile = profile;
-        this.error = null;
-      });
-    } catch (error: any) {
-      runInAction(() => {
-        this.error = error.message;
-      });
-    }
+    const profile = await authService.getUserProfile(uid);
+    runInAction(() => {
+      this.userProfile = profile;
+    });
   }
 
   // ========== EMAIL AUTHENTICATION ==========

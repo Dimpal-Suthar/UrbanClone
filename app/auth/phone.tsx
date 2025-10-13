@@ -141,7 +141,7 @@ const PhoneAuthScreen = observer(() => {
           {/* Continue Button */}
           <View className="mt-8">
             <Button
-              title={loading ? 'Sending OTP...' : 'Continue'}
+              title="Continue"
               onPress={handleSendOTP}
               disabled={phoneNumber.length !== 10 || loading}
               loading={loading}

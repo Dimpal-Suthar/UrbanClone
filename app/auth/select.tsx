@@ -4,7 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 export default function AuthSelectScreen() {
   const router = useRouter();
@@ -42,12 +42,6 @@ export default function AuthSelectScreen() {
           size="lg"
           icon={<Ionicons name="call" size={20} color={colors.primary} />}
         />
-
-        <Pressable onPress={() => router.back()} className="mt-8 self-center">
-          <Text className="text-sm" style={{ color: colors.textSecondary }}>
-            Go Back
-          </Text>
-        </Pressable>
       </View>
     </Container>
   );

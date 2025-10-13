@@ -12,7 +12,7 @@ export const CATEGORIES: CategoryItem[] = [
   {
     id: 'cleaning',
     name: 'Cleaning',
-    icon: 'broom',
+    icon: 'sparkles',
     color: '#4CAF50',
     description: 'Home & Office Cleaning',
   },

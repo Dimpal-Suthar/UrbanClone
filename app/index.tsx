@@ -1,96 +1,65 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Text, View } from 'react-native';
 
 export default function SplashScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
-  const [isNavigating, setIsNavigating] = useState(false);
+  const { user, loading, hasSeenOnboarding } = useAuth();
+  const [showContent, setShowContent] = useState(false);
   
-  // Animation values
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Start animations
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
+    Animated.parallel([
+      Animated.timing(scaleAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-    // Check navigation after animation
-    const timer = setTimeout(() => {
-      checkOnboarding();
-    }, 100);
+    // Timeout fallback - show content after 3 seconds max
+    const fallback = setTimeout(() => {
+      console.log('⏱️ Timeout: Forcing navigation');
+      setShowContent(true);
+    }, 3000);
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(fallback);
   }, []);
 
-  const checkOnboarding = async () => {
-    if (isNavigating) return;
-
-    try {
-      const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-      
-      // Navigate after splash animation
-      setTimeout(() => {
-        setIsNavigating(true);
-        
-        if (hasSeenOnboarding === 'true') {
-          router.push('/auth/select');
-        } else {
-          router.push('/onboarding');
-        }
-      }, 1000);
-    } catch (error) {
-      // Fallback to onboarding on error
-      setTimeout(() => {
-        setIsNavigating(true);
-        router.push('/onboarding');
-      }, 1000);
+  // Show content once loading is done OR timeout
+  useEffect(() => {
+    if (!loading) {
+      setShowContent(true);
     }
-  };
+  }, [loading]);
 
-  return (
-    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.primary }}>
-      {/* Animated Logo */}
-      <Animated.View
-        style={{
-          transform: [{ scale: scaleAnim }],
-        }}
-      >
-        <View className="w-32 h-32 rounded-full items-center justify-center bg-white/20">
-          <View className="w-24 h-24 rounded-full items-center justify-center bg-white">
-            <Ionicons name="home" size={56} color={colors.primary} />
+  // Wait for auth to load
+  if (!showContent) {
+    return (
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.primary }}>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <View className="w-32 h-32 rounded-full items-center justify-center bg-white/20">
+            <View className="w-24 h-24 rounded-full items-center justify-center bg-white">
+              <Ionicons name="home" size={56} color={colors.primary} />
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
 
-      {/* Animated Text */}
-      <Animated.View
-        style={{
-          opacity: fadeAnim,
-          marginTop: 32,
-        }}
-      >
-        <Text className="text-4xl font-bold text-white mb-2">
-          UrbanClone
-        </Text>
-        <Text className="text-lg text-white/80 text-center">
-          Home Services at Your Doorstep
-        </Text>
-      </Animated.View>
-    </View>
-  );
+        <Animated.View style={{ opacity: fadeAnim, marginTop: 32, alignItems: 'center' }}>
+          <Text className="text-4xl font-bold text-white mb-2">UrbanClone</Text>
+          <Text className="text-lg text-white/80 text-center mb-4">
+            Home Services at Your Doorstep
+          </Text>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // Auth loaded - redirect based on state
+  if (user) return <Redirect href="/(tabs)" />;
+  if (hasSeenOnboarding) return <Redirect href="/auth/select" />;
+  return <Redirect href="/onboarding" />;
 }
