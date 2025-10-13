@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "107821226807",
+    "project_id": "urban-clone-10833",
+    "storage_bucket": "urban-clone-10833.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:107821226807:android:52479e05f9003d3cd8d8b2",
+        "android_client_info": {
+          "package_name": "com.urbanclone.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCLkruxAvns0BajYMw_W24PbPZPKoZk9c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

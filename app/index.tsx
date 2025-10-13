@@ -1,65 +1,96 @@
-import { View, Text, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Container } from '@/components/ui/Container';
-import { Button } from '@/components/ui/Button';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Text, View } from 'react-native';
 
 export default function SplashScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const [isNavigating, setIsNavigating] = useState(false);
   
-  // Terminal log - will show in Metro bundler
-  console.warn('🔥 SPLASH SCREEN LOADED - App starting');
+  // Animation values
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Start animations
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Check navigation after animation
+    const timer = setTimeout(() => {
+      checkOnboarding();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const checkOnboarding = async () => {
+    if (isNavigating) return;
+
+    try {
+      const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+      
+      // Navigate after splash animation
+      setTimeout(() => {
+        setIsNavigating(true);
+        
+        if (hasSeenOnboarding === 'true') {
+          router.push('/auth/select');
+        } else {
+          router.push('/onboarding');
+        }
+      }, 1000);
+    } catch (error) {
+      // Fallback to onboarding on error
+      setTimeout(() => {
+        setIsNavigating(true);
+        router.push('/onboarding');
+      }, 1000);
+    }
+  };
 
   return (
-    <View className="flex-1 justify-center items-center px-6" style={{ backgroundColor: colors.background }}>
-      {/* Logo */}
-      <View className="mb-8">
-        <View className="w-24 h-24 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
-          <Ionicons name="home" size={48} color="#FFFFFF" />
-        </View>
-      </View>
-
-      {/* App Name */}
-      <Text className="text-4xl font-bold mb-2" style={{ color: colors.text }}>
-        UrbanClone
-      </Text>
-      <Text className="text-lg mb-12" style={{ color: colors.textSecondary }}>
-        Home Services at Your Doorstep
-      </Text>
-
-      {/* Features */}
-      <View className="mb-12 w-full">
-        {[
-          { icon: 'checkmark-circle', text: '100+ Professional Services' },
-          { icon: 'shield-checkmark', text: 'Verified & Trusted Professionals' },
-          { icon: 'star', text: 'Top Rated Service Quality' },
-        ].map((feature, index) => (
-          <View key={index} className="flex-row items-center mb-4">
-            <Ionicons name={feature.icon as any} size={24} color={colors.primary} />
-            <Text className="ml-3 text-base" style={{ color: colors.text }}>
-              {feature.text}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* CTA Button */}
-      <Pressable
-        onPress={() => router.replace('/(tabs)')}
-        className="w-full rounded-xl py-4 items-center active:opacity-80"
-        style={{ backgroundColor: colors.primary }}
+    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.primary }}>
+      {/* Animated Logo */}
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+        }}
       >
-        <Text className="text-white text-lg font-semibold">Get Started</Text>
-      </Pressable>
+        <View className="w-32 h-32 rounded-full items-center justify-center bg-white/20">
+          <View className="w-24 h-24 rounded-full items-center justify-center bg-white">
+            <Ionicons name="home" size={56} color={colors.primary} />
+          </View>
+        </View>
+      </Animated.View>
 
-      <Pressable onPress={() => router.push('/(tabs)')} className="mt-4">
-        <Text className="text-base" style={{ color: colors.textSecondary }}>
-          Already have an account? <Text style={{ color: colors.primary }} className="font-semibold">Sign In</Text>
+      {/* Animated Text */}
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          marginTop: 32,
+        }}
+      >
+        <Text className="text-4xl font-bold text-white mb-2">
+          UrbanClone
         </Text>
-      </Pressable>
+        <Text className="text-lg text-white/80 text-center">
+          Home Services at Your Doorstep
+        </Text>
+      </Animated.View>
     </View>
   );
 }
-
