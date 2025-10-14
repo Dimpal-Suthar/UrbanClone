@@ -7,7 +7,7 @@ import { ActivityIndicator, Animated, Text, View } from 'react-native';
 
 export default function SplashScreen() {
   const { colors } = useTheme();
-  const { user, loading, hasSeenOnboarding } = useAuth();
+  const { user, userProfile, loading, hasSeenOnboarding } = useAuth();
   const [showContent, setShowContent] = useState(false);
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -31,6 +31,7 @@ export default function SplashScreen() {
   // Show content once loading is done OR timeout
   useEffect(() => {
     if (!loading) {
+      console.log('✅ Auth loaded, user:', user?.uid, 'role:', userProfile?.role);
       setShowContent(true);
     }
   }, [loading]);
@@ -59,7 +60,17 @@ export default function SplashScreen() {
   }
 
   // Auth loaded - redirect based on state
-  if (user) return <Redirect href="/(tabs)" />;
+  if (user && userProfile) {
+    // Route based on role
+    if (userProfile.role === 'admin') {
+      return <Redirect href="/(admin)/dashboard" />;
+    }
+    if (userProfile.role === 'provider') {
+      return <Redirect href="/(provider)/dashboard" />;
+    }
+    return <Redirect href="/(tabs)" />;  // Customer
+  }
+  
   if (hasSeenOnboarding) return <Redirect href="/auth/select" />;
   return <Redirect href="/onboarding" />;
 }

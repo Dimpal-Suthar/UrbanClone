@@ -2,8 +2,11 @@ import { db } from '@/config/firebase';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
+export type UserRole = 'customer' | 'provider' | 'admin';
+
 export interface UserProfile {
   uid: string;
+  role: UserRole;
   phoneNumber?: string;
   email?: string;
   displayName?: string;
@@ -59,7 +62,9 @@ class AuthServiceNative {
         // Create new user profile
         const newUser: UserProfile = {
           uid: user.uid,
+          role: 'customer',  // Default role
           phoneNumber: user.phoneNumber || '',
+          authMethod: 'phone',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };

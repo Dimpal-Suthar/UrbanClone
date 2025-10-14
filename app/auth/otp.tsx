@@ -54,12 +54,22 @@ const OTPVerificationScreen = observer(() => {
       console.log('🔑 Verifying OTP:', otp);
       
       // Real Firebase OTP verification
-      const isComplete = await verifyOTP(otp);
+      const { isComplete, profile } = await verifyOTP(otp);
       
       if (isComplete) {
-        console.log('✅ OTP verified successfully');
-        // Profile is complete, go to home
-        router.replace('/(tabs)');
+        console.log('✅ OTP verified successfully, role:', profile.role);
+        
+        // Route based on role
+        if (profile.role === 'admin') {
+          console.log('→ Routing to admin');
+          router.replace('/(admin)/dashboard');
+        } else if (profile.role === 'provider') {
+          console.log('→ Routing to provider');
+          router.replace('/(provider)/dashboard');
+        } else {
+          console.log('→ Routing to customer');
+          router.replace('/(tabs)');
+        }
       } else {
         console.log('✅ OTP verified, profile incomplete');
         // Profile incomplete, go to profile setup

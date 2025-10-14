@@ -12,19 +12,20 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 're
 const EmailAuthScreen = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
-  const { signInWithEmail, signUpWithEmail, loading, error, clearError } = useAuth();
+  const { signInWithEmail, signUpWithEmail, userProfile, loading, error, clearError } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [wantsToBecomeProvider, setWantsToBecomeProvider] = useState(false);
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
-    // Clear form when switching modes
     setEmail('');
     setPassword('');
     setName('');
+    setWantsToBecomeProvider(false);
     clearError();
   };
 
@@ -36,15 +37,38 @@ const EmailAuthScreen = observer(() => {
 
     try {
       clearError();
+      console.log('🔄 Starting auth, loading:', loading);
       
       if (isSignUp) {
-        await signUpWithEmail(email, password, name);
-        Alert.alert('Success', 'Account created! Check your email.', 
-          [{ text: 'OK', onPress: () => setIsSignUp(false) }]
-        );
+        console.log('📝 Signing up...');
+        await signUpWithEmail(email, password, name, wantsToBecomeProvider);
+        console.log('✅ Signup complete');
+        
+        if (wantsToBecomeProvider) {
+          Alert.alert(
+            'Application Submitted!',
+            'Your provider application will be reviewed within 24-48 hours. Meanwhile, you can use the app as a customer.',
+            [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
+          );
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
-        await signInWithEmail(email, password);
-        router.replace('/(tabs)');
+        console.log('🔐 Signing in...');
+        const profile = await signInWithEmail(email, password);
+        console.log('✅ Sign in complete, role:', profile?.role);
+        
+        // Route based on role (use returned profile, not store)
+        if (profile?.role === 'admin') {
+          console.log('→ Routing to admin');
+          router.replace('/(admin)/dashboard');
+        } else if (profile?.role === 'provider') {
+          console.log('→ Routing to provider');
+          router.replace('/(provider)/dashboard');
+        } else {
+          console.log('→ Routing to customer');
+          router.replace('/(tabs)');
+        }
       }
     } catch (err: any) {
       Alert.alert('Error', err.message);
@@ -92,6 +116,74 @@ const EmailAuthScreen = observer(() => {
             onChangeText={setPassword}
             secureTextEntry
           />
+
+          {/* Role Selection (Signup Only) */}
+          {isSignUp && (
+            <View className="mb-4">
+              <Text className="text-sm font-medium mb-3" style={{ color: colors.textSecondary }}>
+                I want to sign up as:
+              </Text>
+              <View className="flex-row gap-3">
+                <Pressable
+                  onPress={() => setWantsToBecomeProvider(false)}
+                  className="flex-1"
+                >
+                  <View
+                    className="p-4 rounded-xl items-center"
+                    style={{
+                      backgroundColor: !wantsToBecomeProvider ? `${colors.primary}20` : colors.surface,
+                      borderWidth: 2,
+                      borderColor: !wantsToBecomeProvider ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Ionicons 
+                      name="person" 
+                      size={32} 
+                      color={!wantsToBecomeProvider ? colors.primary : colors.textSecondary} 
+                    />
+                    <Text 
+                      className="mt-2 font-semibold"
+                      style={{ color: !wantsToBecomeProvider ? colors.primary : colors.text }}
+                    >
+                      Customer
+                    </Text>
+                    <Text className="text-xs text-center mt-1" style={{ color: colors.textSecondary }}>
+                      Book services
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setWantsToBecomeProvider(true)}
+                  className="flex-1"
+                >
+                  <View
+                    className="p-4 rounded-xl items-center"
+                    style={{
+                      backgroundColor: wantsToBecomeProvider ? `${colors.success}20` : colors.surface,
+                      borderWidth: 2,
+                      borderColor: wantsToBecomeProvider ? colors.success : colors.border,
+                    }}
+                  >
+                    <Ionicons 
+                      name="briefcase" 
+                      size={32} 
+                      color={wantsToBecomeProvider ? colors.success : colors.textSecondary} 
+                    />
+                    <Text 
+                      className="mt-2 font-semibold"
+                      style={{ color: wantsToBecomeProvider ? colors.success : colors.text }}
+                    >
+                      Provider
+                    </Text>
+                    <Text className="text-xs text-center mt-1" style={{ color: colors.textSecondary }}>
+                      Offer services
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {error && (
             <View className="rounded-lg px-4 py-3 mb-4" style={{ backgroundColor: `${colors.error}15` }}>

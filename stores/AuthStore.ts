@@ -66,14 +66,19 @@ export class AuthStore {
   /**
    * Sign up with email
    */
-  async signUpWithEmail(email: string, password: string, displayName?: string): Promise<void> {
+  async signUpWithEmail(
+    email: string, 
+    password: string, 
+    displayName?: string, 
+    wantsToBecomeProvider?: boolean
+  ): Promise<void> {
     try {
       runInAction(() => {
         this.loading = true;
         this.error = null;
       });
 
-      await authService.signUpWithEmail(email, password, displayName);
+      await authService.signUpWithEmail(email, password, displayName, wantsToBecomeProvider);
       
       runInAction(() => {
         this.loading = false;
@@ -91,18 +96,22 @@ export class AuthStore {
   /**
    * Sign in with email
    */
-  async signInWithEmail(email: string, password: string): Promise<void> {
+  async signInWithEmail(email: string, password: string): Promise<UserProfile> {
     try {
       runInAction(() => {
         this.loading = true;
         this.error = null;
       });
 
-      await authService.signInWithEmail(email, password);
+      const profile = await authService.signInWithEmail(email, password);
       
+      // Set profile immediately so routing can use it
       runInAction(() => {
+        this.userProfile = profile;
         this.loading = false;
       });
+
+      return profile;
     } catch (error: any) {
       console.error('SignIn error:', error.message);
       runInAction(() => {
@@ -170,7 +179,7 @@ export class AuthStore {
   /**
    * Verify OTP code
    */
-  async verifyOTP(code: string): Promise<boolean> {
+  async verifyOTP(code: string): Promise<{ isComplete: boolean; profile: UserProfile }> {
     if (!this.verificationId) {
       throw new Error('No verification ID found');
     }
@@ -189,7 +198,7 @@ export class AuthStore {
         this.verificationId = null;
       });
       
-      return this.isProfileComplete();
+      return { isComplete: this.isProfileComplete(), profile };
     } catch (error: any) {
       console.error('VerifyOTP error:', error.message);
       runInAction(() => {

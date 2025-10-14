@@ -1,9 +1,12 @@
+export type UserRole = 'customer' | 'provider' | 'admin';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   phone: string;
   photoURL?: string;
+  role: UserRole;
   location?: UserLocation;
 }
 

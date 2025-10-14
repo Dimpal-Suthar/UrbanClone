@@ -4,28 +4,24 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/hooks/useRole';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: 'edit-profile' },
-  { id: '2', icon: 'location-outline', label: 'Saved Addresses', screen: 'addresses' },
-  { id: '3', icon: 'card-outline', label: 'Payment Methods', screen: 'payment-methods' },
-  { id: '4', icon: 'gift-outline', label: 'Rewards & Offers', screen: 'rewards', badge: '250 pts' },
-  { id: '5', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '6', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '2', icon: 'document-text-outline', label: 'My Documents', screen: 'documents' },
+  { id: '3', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
+  { id: '4', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
+  { id: '5', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
 ];
 
-const ProfileScreen = observer(() => {
+const ProviderProfileScreen = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
   const { user, userProfile, signOut } = useAuth();
-  const { isProvider, isAdmin } = useRole();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = () => {
@@ -49,7 +45,7 @@ const ProfileScreen = observer(() => {
     ]);
   };
 
-  const displayName = userProfile?.displayName || user?.displayName || 'User';
+  const displayName = userProfile?.displayName || user?.displayName || 'Provider';
   const email = userProfile?.email || user?.email || '';
   const phoneNumber = userProfile?.phoneNumber || user?.phoneNumber || '';
   const photoURL = userProfile?.photoURL || user?.photoURL;
@@ -70,9 +66,19 @@ const ProfileScreen = observer(() => {
             <View className="flex-row items-center">
               <Avatar uri={photoURL} name={displayName} size={80} />
               <View className="flex-1 ml-4">
-                <Text className="text-xl font-bold mb-1" style={{ color: colors.text }}>
-                  {displayName}
-                </Text>
+                <View className="flex-row items-center mb-1">
+                  <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                    {displayName}
+                  </Text>
+                  <View 
+                    className="ml-2 px-2 py-0.5 rounded"
+                    style={{ backgroundColor: `${colors.success}20` }}
+                  >
+                    <Text className="text-xs font-bold" style={{ color: colors.success }}>
+                      PROVIDER
+                    </Text>
+                  </View>
+                </View>
                 <Text className="text-sm mb-1" style={{ color: colors.textSecondary }}>
                   {email || phoneNumber}
                 </Text>
@@ -94,66 +100,21 @@ const ProfileScreen = observer(() => {
         <View className="flex-row px-6 mb-6 gap-3">
           <Card variant="elevated" className="flex-1 items-center py-4">
             <Text className="text-2xl font-bold mb-1" style={{ color: colors.primary }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Bookings</Text>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>Jobs Done</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Points</Text>
+            <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>0.0</Text>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>Rating</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Reviews</Text>
+            <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>₹0</Text>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>Earned</Text>
           </Card>
         </View>
-
-        {/* Become Provider (Only for customers) */}
-        {!isProvider && !isAdmin && (
-          <View className="px-6 mb-6">
-            <Pressable onPress={() => router.push('/provider/apply')} className="active:opacity-70">
-              <Card variant="elevated">
-                <View className="flex-row items-center">
-                  <View 
-                    className="w-12 h-12 rounded-full items-center justify-center"
-                    style={{ backgroundColor: `${colors.success}20` }}
-                  >
-                    <Ionicons name="briefcase" size={24} color={colors.success} />
-                  </View>
-                  <View className="flex-1 ml-4">
-                    <Text className="text-base font-bold mb-1" style={{ color: colors.text }}>
-                      Become a Service Provider
-                    </Text>
-                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                      Start earning by offering your services
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                </View>
-              </Card>
-            </Pressable>
-          </View>
-        )}
 
         {/* Settings */}
         <View className="px-6 mb-4">
           <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>Settings</Text>
-
-          <Card variant="default" className="mb-3">
-            <View className="flex-row items-center justify-between py-1">
-              <View className="flex-row items-center flex-1">
-                <Ionicons name="notifications-outline" size={22} color={colors.text} />
-                <Text className="ml-3 text-base" style={{ color: colors.text }}>
-                  Push Notifications
-                </Text>
-              </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </Card>
-
           <ThemeSettings />
         </View>
 
@@ -170,13 +131,6 @@ const ProfileScreen = observer(() => {
                       {item.label}
                     </Text>
                   </View>
-                  {item.badge && (
-                    <View className="px-3 py-1 rounded-full mr-2" style={{ backgroundColor: `${colors.primary}20` }}>
-                      <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
-                        {item.badge}
-                      </Text>
-                    </View>
-                  )}
                   <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                 </View>
               </Card>
@@ -211,4 +165,5 @@ const ProfileScreen = observer(() => {
   );
 });
 
-export default ProfileScreen;
+export default ProviderProfileScreen;
+

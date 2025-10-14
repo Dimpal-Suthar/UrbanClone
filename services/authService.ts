@@ -12,8 +12,11 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { parsePhoneNumber } from 'libphonenumber-js';
 
+export type UserRole = 'customer' | 'provider' | 'admin';
+
 export interface UserProfile {
   uid: string;
+  role: UserRole;
   phoneNumber?: string;
   email?: string;
   displayName?: string;
@@ -32,7 +35,12 @@ class AuthService {
   /**
    * Sign up with email and password
    */
-  async signUpWithEmail(email: string, password: string, displayName?: string): Promise<UserProfile> {
+  async signUpWithEmail(
+    email: string, 
+    password: string, 
+    displayName?: string, 
+    wantsToBecomeProvider?: boolean
+  ): Promise<UserProfile> {
     try {
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -49,6 +57,7 @@ class AuthService {
       // Create user profile in Firestore
       const newUser: UserProfile = {
         uid: user.uid,
+        role: 'customer',  // Default role
         email: user.email || '',
         displayName: displayName || '',
         authMethod: 'email',
@@ -58,6 +67,20 @@ class AuthService {
       };
       
       await setDoc(doc(db, 'users', user.uid), newUser);
+      
+      // If wants to become provider, create provider application
+      if (wantsToBecomeProvider) {
+        await setDoc(doc(db, 'providers', user.uid), {
+          userId: user.uid,
+          approvalStatus: 'pending',
+          services: [],  // Will add later
+          experience: 0,
+          bio: '',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      
       return newUser;
     } catch (error: any) {
       console.error('SignUp error:', error.code, error.message);
@@ -82,6 +105,7 @@ class AuthService {
         // Create profile if doesn't exist
         const newUser: UserProfile = {
           uid: user.uid,
+          role: 'customer',  // Default role
           email: user.email || '',
           displayName: user.displayName || '',
           authMethod: 'email',
@@ -161,6 +185,7 @@ class AuthService {
         // Create new user profile
         const newUser: UserProfile = {
           uid: user.uid,
+          role: 'customer',  // Default role
           phoneNumber: user.phoneNumber || '',
           authMethod: 'phone',
           createdAt: serverTimestamp(),

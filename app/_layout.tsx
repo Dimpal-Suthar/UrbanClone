@@ -20,6 +20,9 @@ export default function RootLayout() {
             <Stack.Screen name="auth/otp" />
             <Stack.Screen name="auth/profile" />
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(provider)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="provider/apply" />
             <Stack.Screen name="service/[id]" />
             <Stack.Screen name="chat/[id]" />
           </Stack>
