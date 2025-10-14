@@ -61,6 +61,7 @@ export default function SplashScreen() {
 
   // Auth loaded - redirect based on state
   if (user && userProfile) {
+    console.log('✅ User authenticated, role:', userProfile.role);
     // Route based on role
     if (userProfile.role === 'admin') {
       return <Redirect href="/(admin)/dashboard" />;
@@ -71,6 +72,21 @@ export default function SplashScreen() {
     return <Redirect href="/(tabs)" />;  // Customer
   }
   
+  // User is logged in but profile is loading - show loading
+  if (user && !userProfile) {
+    console.log('⏳ User logged in but profile loading...');
+    return (
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 text-lg" style={{ color: colors.text }}>
+          Loading profile...
+        </Text>
+      </View>
+    );
+  }
+  
+  // No user - redirect to auth
+  console.log('❌ No user, redirecting to auth');
   if (hasSeenOnboarding) return <Redirect href="/auth/select" />;
   return <Redirect href="/onboarding" />;
 }

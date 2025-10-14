@@ -1,12 +1,15 @@
 import { createContext, useContext } from 'react';
 import { authStore, AuthStore } from './AuthStore';
+import { serviceStore, ServiceStore } from './ServiceStore';
 
 // Root store containing all stores
 class RootStore {
   authStore: AuthStore;
+  serviceStore: ServiceStore;
 
   constructor() {
     this.authStore = authStore;
+    this.serviceStore = serviceStore;
   }
 }
 

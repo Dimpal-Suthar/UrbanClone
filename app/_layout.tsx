@@ -23,7 +23,10 @@ export default function RootLayout() {
             <Stack.Screen name="(provider)" />
             <Stack.Screen name="(admin)" />
             <Stack.Screen name="provider/apply" />
+            <Stack.Screen name="provider/[id]" />
             <Stack.Screen name="service/[id]" />
+            <Stack.Screen name="service/professionals/[id]" />
+            <Stack.Screen name="service/reviews/[id]" />
             <Stack.Screen name="chat/[id]" />
           </Stack>
         </ThemeProvider>

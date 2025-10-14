@@ -1,14 +1,27 @@
 import { useTheme } from '@/contexts/ThemeContext';
-import { useRole } from '@/hooks/useRole';
+import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 export default function AdminLayout() {
-  const { isAdmin } = useRole();
+  const { user, userProfile, loading } = useAuth();
   const { colors } = useTheme();
   
+  // Show loading while auth is being determined
+  if (loading || (user && !userProfile)) {
+    return (
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 text-lg" style={{ color: colors.text }}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
+  
   // Only admins can access
-  if (!isAdmin) {
+  if (!user || userProfile?.role !== 'admin') {
     return <Redirect href="/(tabs)" />;
   }
   

@@ -35,17 +35,24 @@ export class AuthStore {
     
     // Listen to auth state changes
     onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
+      console.log('🔄 Auth state changed:', firebaseUser?.uid ? 'User logged in' : 'User logged out');
+      
+      runInAction(() => {
+        this.user = firebaseUser;
+        this.loading = false;
+      });
+
+      if (firebaseUser) {
+        try {
           await this.loadUserProfile(firebaseUser.uid);
+        } catch (error) {
+          console.error('Load profile error:', error);
+          // Keep existing userProfile if loading fails
         }
-      } catch (error) {
-        console.error('Load profile error:', error);
-      } finally {
+      } else {
+        // Only clear userProfile when user actually logs out
         runInAction(() => {
-          this.user = firebaseUser;
-          this.userProfile = firebaseUser ? this.userProfile : null;
-          this.loading = false;
+          this.userProfile = null;
         });
       }
     });
@@ -55,10 +62,16 @@ export class AuthStore {
    * Load user profile from Firestore
    */
   private async loadUserProfile(uid: string) {
-    const profile = await authService.getUserProfile(uid);
-    runInAction(() => {
-      this.userProfile = profile;
-    });
+    try {
+      const profile = await authService.getUserProfile(uid);
+      runInAction(() => {
+        this.userProfile = profile;
+      });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      // Don't set userProfile to null on error, keep existing value
+      // This prevents unnecessary redirects to auth screens
+    }
   }
 
   // ========== EMAIL AUTHENTICATION ==========
