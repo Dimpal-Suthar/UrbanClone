@@ -8,12 +8,12 @@ import { SERVICE_CATEGORIES } from '@/constants/ServiceCategories';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUploadImage } from '@/hooks/useImageUpload';
 import { useAllServices, useCreateService, useDeleteService, useToggleServiceStatus, useUpdateService } from '@/hooks/useServices';
-import { getStoragePath } from '@/services/storageService';
 import { CreateServiceInput, Service, ServiceCategory } from '@/types';
+import { showFailedMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 const AdminServicesScreen = observer(() => {
   const { colors } = useTheme();
@@ -43,48 +43,22 @@ const AdminServicesScreen = observer(() => {
     setShowCreateModal(true);
   };
 
-  const handleDelete = (service: Service) => {
-    Alert.alert(
-      'Delete Service',
-      `Are you sure you want to delete "${service.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoadingAction({ id: service.id, action: 'delete' });
-            try {
-              await deleteMutation.mutateAsync(service.id);
-            } finally {
-              setLoadingAction(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleDelete = async (service: Service) => {
+    setLoadingAction({ id: service.id, action: 'delete' });
+    try {
+      await deleteMutation.mutateAsync(service.id);
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
-  const handleToggleStatus = (service: Service) => {
-    const action = service.isActive ? 'deactivate' : 'activate';
-    Alert.alert(
-      `${action.charAt(0).toUpperCase() + action.slice(1)} Service`,
-      `Are you sure you want to ${action} "${service.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: action.charAt(0).toUpperCase() + action.slice(1),
-          onPress: async () => {
-            setLoadingAction({ id: service.id, action: 'toggle' });
-            try {
-              await toggleMutation.mutateAsync({ serviceId: service.id, isActive: !service.isActive });
-            } finally {
-              setLoadingAction(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleToggleStatus = async (service: Service) => {
+    setLoadingAction({ id: service.id, action: 'toggle' });
+    try {
+      await toggleMutation.mutateAsync({ serviceId: service.id, isActive: !service.isActive });
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const activeCount = services.filter((s) => s.isActive).length;
@@ -361,7 +335,7 @@ const ServiceFormModal = ({
 
   const handleSubmit = async () => {
     if (!name || !description || !basePrice || !duration) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showWarningMessage('Missing Fields', 'Please fill in all required fields');
       return;
     }
 
@@ -371,7 +345,7 @@ const ServiceFormModal = ({
       // Upload image to Firebase Storage if it's a local URI
       if (imageUri && imageUri.startsWith('file://')) {
         const tempServiceId = service?.id || `temp_${Date.now()}`;
-        const path = getStoragePath.serviceImages(tempServiceId);
+        const path = `services/${tempServiceId}/image`;
         const uploadedUrl = await uploadImageMutation.mutateAsync({ 
           imageUri, 
           path 
@@ -397,7 +371,7 @@ const ServiceFormModal = ({
       }
     } catch (error) {
       console.error('Submit service error:', error);
-      Alert.alert('Error', 'Failed to save service. Please try again.');
+      showFailedMessage('Save Failed', 'Failed to save service. Please try again.');
     }
   };
 

@@ -30,17 +30,17 @@ export default function AuthSelectScreen() {
           onPress={() => router.push('/auth/email')}
           variant="primary"
           size="lg"
-          icon={<Ionicons name="mail" size={20} color="#FFF" />}
+          icon="mail"
         />
 
-        <View className="my-4" />
+        <View className="my-2" />
 
         <Button
           title="Continue with Phone"
           onPress={() => router.push('/auth/phone')}
           variant="outline"
           size="lg"
-          icon={<Ionicons name="call" size={20} color={colors.primary} />}
+          icon="call"
         />
       </View>
     </Container>

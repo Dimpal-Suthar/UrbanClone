@@ -29,6 +29,7 @@ export const useAuth = () => {
     
     // Common Actions
     updateProfile: authStore.updateProfile.bind(authStore),
+    refreshUserProfile: authStore.refreshUserProfile.bind(authStore),
     signOut: authStore.signOut.bind(authStore),
     markOnboardingSeen: authStore.markOnboardingSeen.bind(authStore),
     isProfileComplete: authStore.isProfileComplete.bind(authStore),

@@ -1,14 +1,16 @@
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAdminStats } from '@/hooks/useAdminStats';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 const AdminDashboard = observer(() => {
   const { colors } = useTheme();
   const router = useRouter();
+  const { data: stats, isLoading } = useAdminStats();
 
   return (
     <Container>
@@ -27,13 +29,25 @@ const AdminDashboard = observer(() => {
           <View className="flex-row gap-3 mb-3">
             <Card variant="elevated" className="flex-1 p-4">
               <Ionicons name="people" size={32} color={colors.primary} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+              ) : (
+                <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                  {stats?.totalUsers || 0}
+                </Text>
+              )}
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Total Users</Text>
             </Card>
 
             <Card variant="elevated" className="flex-1 p-4">
               <Ionicons name="briefcase" size={32} color={colors.success} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.success} style={{ marginTop: 8 }} />
+              ) : (
+                <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                  {stats?.totalProviders || 0}
+                </Text>
+              )}
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Providers</Text>
             </Card>
           </View>
@@ -41,13 +55,25 @@ const AdminDashboard = observer(() => {
           <View className="flex-row gap-3">
             <Card variant="elevated" className="flex-1 p-4">
               <Ionicons name="calendar" size={32} color={colors.warning} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.warning} style={{ marginTop: 8 }} />
+              ) : (
+                <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                  {stats?.totalBookings || 0}
+                </Text>
+              )}
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Bookings</Text>
             </Card>
 
             <Card variant="elevated" className="flex-1 p-4">
               <Ionicons name="cash" size={32} color={colors.success} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>₹0</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.success} style={{ marginTop: 8 }} />
+              ) : (
+                <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                  ₹{stats?.totalRevenue || 0}
+                </Text>
+              )}
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Revenue</Text>
             </Card>
           </View>

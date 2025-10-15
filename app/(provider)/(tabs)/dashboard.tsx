@@ -2,16 +2,20 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useProviderStats } from '@/hooks/useProviderStats';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 const ProviderDashboard = observer(() => {
   const { colors } = useTheme();
   const { userProfile } = useAuth();
+  const router = useRouter();
+  const { stats, isLoading } = useProviderStats();
 
   return (
-    <Container>
+    <Container safeArea edges={['top', 'bottom']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-4 pb-6">
@@ -36,31 +40,75 @@ const ProviderDashboard = observer(() => {
         {/* Stats Grid */}
         <View className="px-6 mb-6">
           <View className="flex-row gap-3 mb-3">
-            <Card variant="elevated" className="flex-1 p-4">
-              <Ionicons name="calendar-outline" size={28} color={colors.primary} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0</Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>Today's Bookings</Text>
-            </Card>
+            <Pressable 
+              className="flex-1 active:opacity-70"
+              onPress={() => router.push('/(provider)/(tabs)/bookings')}
+            >
+              <Card variant="elevated" className="p-4">
+                <Ionicons name="calendar-outline" size={28} color={colors.primary} />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+                ) : (
+                  <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                    {stats?.todaysBookings || 0}
+                  </Text>
+                )}
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>Today's Bookings</Text>
+              </Card>
+            </Pressable>
 
-            <Card variant="elevated" className="flex-1 p-4">
-              <Ionicons name="checkmark-circle-outline" size={28} color={colors.success} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0</Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>Completed</Text>
-            </Card>
+            <Pressable 
+              className="flex-1 active:opacity-70"
+              onPress={() => router.push('/(provider)/(tabs)/bookings')}
+            >
+              <Card variant="elevated" className="p-4">
+                <Ionicons name="checkmark-circle-outline" size={28} color={colors.success} />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={colors.success} style={{ marginTop: 8 }} />
+                ) : (
+                  <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                    {stats?.completedBookings || 0}
+                  </Text>
+                )}
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>Completed</Text>
+              </Card>
+            </Pressable>
           </View>
 
           <View className="flex-row gap-3">
-            <Card variant="elevated" className="flex-1 p-4">
-              <Ionicons name="cash-outline" size={28} color={colors.warning} />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>₹0</Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>Today's Earnings</Text>
-            </Card>
+            <Pressable 
+              className="flex-1 active:opacity-70"
+              onPress={() => router.push('/(provider)/(tabs)/earnings')}
+            >
+              <Card variant="elevated" className="p-4">
+                <Ionicons name="cash-outline" size={28} color={colors.warning} />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={colors.warning} style={{ marginTop: 8 }} />
+                ) : (
+                  <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                    ₹{stats?.totalEarnings || 0}
+                  </Text>
+                )}
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>Total Earnings</Text>
+              </Card>
+            </Pressable>
 
-            <Card variant="elevated" className="flex-1 p-4">
-              <Ionicons name="star" size={28} color="#FFD700" />
-              <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>0.0</Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>Rating</Text>
-            </Card>
+            <Pressable 
+              className="flex-1 active:opacity-70"
+              onPress={() => router.push('/(provider)/(tabs)/profile')}
+            >
+              <Card variant="elevated" className="p-4">
+                <Ionicons name="star" size={28} color="#FFD700" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFD700" style={{ marginTop: 8 }} />
+                ) : (
+                  <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
+                    {stats?.averageRating?.toFixed(1) || '0.0'}
+                  </Text>
+                )}
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>Rating</Text>
+              </Card>
+            </Pressable>
           </View>
         </View>
 
@@ -87,7 +135,10 @@ const ProviderDashboard = observer(() => {
             Quick Actions
           </Text>
 
-          <Pressable className="mb-3 active:opacity-70">
+          <Pressable 
+            className="mb-3 active:opacity-70"
+            onPress={() => router.push('/(provider)/availability')}
+          >
             <Card variant="default">
               <View className="flex-row items-center">
                 <View 
@@ -101,7 +152,7 @@ const ProviderDashboard = observer(() => {
                     Set Availability
                   </Text>
                   <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                    Manage your working hours
+                    Set custom hours to get more bookings
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -109,7 +160,10 @@ const ProviderDashboard = observer(() => {
             </Card>
           </Pressable>
 
-          <Pressable className="mb-3 active:opacity-70">
+          <Pressable 
+            className="mb-3 active:opacity-70"
+            onPress={() => router.push('/(provider)/(tabs)/services')}
+          >
             <Card variant="default">
               <View className="flex-row items-center">
                 <View 
@@ -131,7 +185,10 @@ const ProviderDashboard = observer(() => {
             </Card>
           </Pressable>
 
-          <Pressable className="active:opacity-70">
+          <Pressable 
+            className="active:opacity-70"
+            onPress={() => router.push('/(provider)/(tabs)/earnings')}
+          >
             <Card variant="default">
               <View className="flex-row items-center">
                 <View 

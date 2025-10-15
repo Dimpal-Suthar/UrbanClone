@@ -1,7 +1,7 @@
 import serviceService from '@/services/serviceService';
 import { CreateServiceInput, Service, UpdateServiceInput } from '@/types';
+import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert } from 'react-native';
 
 // Query keys for caching
 export const serviceKeys = {
@@ -80,10 +80,10 @@ export const useCreateService = () => {
         return old ? [newService, ...old] : [newService];
       });
       
-      Alert.alert('Success', 'Service created successfully!');
+      showSuccessMessage('Service Created', 'Service has been created successfully');
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message || 'Failed to create service');
+      showFailedMessage('Create Failed', error.message || 'Failed to create service');
     },
   });
 };
@@ -102,10 +102,10 @@ export const useUpdateService = () => {
       queryClient.invalidateQueries({ queryKey: serviceKeys.all });
       queryClient.invalidateQueries({ queryKey: serviceKeys.detail(variables.serviceId) });
       
-      Alert.alert('Success', 'Service updated successfully!');
+      showSuccessMessage('Service Updated', 'Service has been updated successfully');
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message || 'Failed to update service');
+      showFailedMessage('Update Failed', error.message || 'Failed to update service');
     },
   });
 };
@@ -125,10 +125,10 @@ export const useDeleteService = () => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: serviceKeys.detail(serviceId) });
       
-      Alert.alert('Success', 'Service deleted successfully!');
+      showSuccessMessage('Service Deleted', 'Service has been deleted successfully');
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message || 'Failed to delete service');
+      showFailedMessage('Delete Failed', error.message || 'Failed to delete service');
     },
   });
 };
@@ -148,10 +148,10 @@ export const useToggleServiceStatus = () => {
       queryClient.invalidateQueries({ queryKey: serviceKeys.detail(variables.serviceId) });
       
       const status = variables.isActive ? 'activated' : 'deactivated';
-      Alert.alert('Success', `Service ${status} successfully!`);
+      showSuccessMessage(`Service ${status.charAt(0).toUpperCase() + status.slice(1)}`, `Service has been ${status} successfully`);
     },
     onError: (error: Error) => {
-      Alert.alert('Error', error.message || 'Failed to toggle service status');
+      showFailedMessage('Toggle Failed', error.message || 'Failed to toggle service status');
     },
   });
 };

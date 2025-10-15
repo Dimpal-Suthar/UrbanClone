@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useProviderStats } from '@/hooks/useProviderStats';
+import { showInfoMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -11,7 +13,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 const MENU_ITEMS = [
-  { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: 'edit-profile' },
+  { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'document-text-outline', label: 'My Documents', screen: 'documents' },
   { id: '3', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
   { id: '4', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
@@ -23,6 +25,7 @@ const ProviderProfileScreen = observer(() => {
   const { colors } = useTheme();
   const { user, userProfile, signOut } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { stats, isLoading } = useProviderStats();
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -45,13 +48,26 @@ const ProviderProfileScreen = observer(() => {
     ]);
   };
 
+  const handleMenuPress = (screen: string) => {
+    if (screen === '/profile/edit') {
+      router.push(screen);
+      return;
+    }
+    if (screen === 'edit-profile') {
+      showInfoMessage('Coming Soon', 'Edit profile feature will be available soon');
+      return;
+    }
+    // Add navigation logic for other menu items
+    console.log('Navigate to:', screen);
+  };
+
   const displayName = userProfile?.displayName || user?.displayName || 'Provider';
   const email = userProfile?.email || user?.email || '';
   const phoneNumber = userProfile?.phoneNumber || user?.phoneNumber || '';
   const photoURL = userProfile?.photoURL || user?.photoURL;
 
   return (
-    <Container>
+    <Container safeArea edges={['top', 'bottom']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-4 pb-6">
@@ -99,15 +115,33 @@ const ProviderProfileScreen = observer(() => {
         {/* Stats */}
         <View className="flex-row px-6 mb-6 gap-3">
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.primary }}>0</Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.primary }}>
+                {stats?.completedBookings || 0}
+              </Text>
+            )}
             <Text className="text-sm" style={{ color: colors.textSecondary }}>Jobs Done</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>0.0</Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.warning} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>
+                {stats?.averageRating?.toFixed(1) || '0.0'}
+              </Text>
+            )}
             <Text className="text-sm" style={{ color: colors.textSecondary }}>Rating</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>₹0</Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.success} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>
+                ₹{stats?.totalEarnings || 0}
+              </Text>
+            )}
             <Text className="text-sm" style={{ color: colors.textSecondary }}>Earned</Text>
           </Card>
         </View>
@@ -122,7 +156,7 @@ const ProviderProfileScreen = observer(() => {
         <View className="px-6 mb-6">
           <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>Account</Text>
           {MENU_ITEMS.map((item) => (
-            <Pressable key={item.id} className="active:opacity-70">
+            <Pressable key={item.id} onPress={() => handleMenuPress(item.screen)} className="active:opacity-70">
               <Card variant="default" className="mb-3">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center flex-1">

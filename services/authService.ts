@@ -224,8 +224,19 @@ class AuthService {
    */
   async getUserProfile(uid: string): Promise<UserProfile | null> {
     try {
+      console.log('🔍 Fetching user profile for UID:', uid);
       const userDoc = await getDoc(doc(db, 'users', uid));
-      return userDoc.exists() ? (userDoc.data() as UserProfile) : null;
+      console.log('📄 User document exists:', userDoc.exists());
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as UserProfile;
+        console.log('📋 Raw user data from Firestore:', userData);
+        console.log('🖼️ photoURL in fetched data:', userData.photoURL);
+        return userData;
+      }
+      
+      console.log('❌ User document does not exist');
+      return null;
     } catch (error: any) {
       console.error('GetProfile error:', error.message);
       throw this.handleAuthError(error);

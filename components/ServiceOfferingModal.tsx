@@ -5,9 +5,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useUploadImages } from '@/hooks/useImageUpload';
 import { useActiveServices } from '@/hooks/useServices';
 import { ProviderServiceOffering } from '@/types';
+import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 interface ServiceOfferingModalProps {
   visible: boolean;
@@ -69,7 +70,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
       const newImages = [...images, imageUri];
       setImages(newImages);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add image');
+      showFailedMessage('Error', 'Failed to add image');
     } finally {
       setUploadingImage(false);
     }
@@ -82,7 +83,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
 
   const handleSubmit = async () => {
     if (!selectedServiceId || !customPrice || !description || !experience) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showFailedMessage('Error', 'Please fill in all fields');
       return;
     }
 

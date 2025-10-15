@@ -4786,7 +4786,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-image-picker@npm:^17.0.8":
+"expo-image-picker@npm:~17.0.8":
   version: 17.0.8
   resolution: "expo-image-picker@npm:17.0.8"
   dependencies:
@@ -4807,6 +4807,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-linear-gradient@npm:~15.0.7":
+  version: 15.0.7
+  resolution: "expo-linear-gradient@npm:15.0.7"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 2c8b9674099aa6a8a8910ee0e698217cfb2a3be47b32860aa7483f6e38ce27c62bcd51af24cf30d84c31fd5eb1870ebd5bf432ba71ee0a4266b75b7eca99aef6
+  languageName: node
+  linkType: hard
+
 "expo-linking@npm:~8.0.8":
   version: 8.0.8
   resolution: "expo-linking@npm:8.0.8"
@@ -4817,6 +4828,15 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 3fae8c60ab4622e42541c62b4b52019eb37da777afaa36deed60151fa45f42bb7482c9479cd946223bd3260f80fb2e2d91378a60ee577f5a8a6fd0f9bd4c2b90
+  languageName: node
+  linkType: hard
+
+"expo-location@npm:^19.0.7":
+  version: 19.0.7
+  resolution: "expo-location@npm:19.0.7"
+  peerDependencies:
+    expo: "*"
+  checksum: 2c11728c36cd81ec1fb62cb275074dbe74618c14dcea074bd6e11ded8d652aba2a9f34560bf05aa70afc05ea874d43208f8679442d7c27f30dd12d37c0b67774
   languageName: node
   linkType: hard
 
@@ -7785,6 +7805,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-toast-message@npm:^2.3.3":
+  version: 2.3.3
+  resolution: "react-native-toast-message@npm:2.3.3"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 313fe6e6b6437b2384d13f8987a141f9aa2df0930a668628276ed5ea990917e7d953dfa1584aa4991326ee9430baab1b735adf0b4a9861e702996617a583cc33
+  languageName: node
+  linkType: hard
+
 "react-native-webview@npm:13.15.0":
   version: 13.15.0
   resolution: "react-native-webview@npm:13.15.0"
@@ -8961,8 +8991,10 @@ __metadata:
     expo: ~54.0.13
     expo-constants: ~18.0.9
     expo-font: ~14.0.9
-    expo-image-picker: ^17.0.8
+    expo-image-picker: ~17.0.8
+    expo-linear-gradient: ~15.0.7
     expo-linking: ~8.0.8
+    expo-location: ^19.0.7
     expo-router: ~6.0.12
     expo-status-bar: ~3.0.8
     firebase: ^12.4.0
@@ -8976,6 +9008,7 @@ __metadata:
     react-native-reanimated: ~4.1.1
     react-native-safe-area-context: ~5.6.0
     react-native-screens: ~4.16.0
+    react-native-toast-message: ^2.3.3
     react-native-webview: 13.15.0
     react-native-worklets: 0.5.1
     tailwindcss: 3.3.2

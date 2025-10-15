@@ -41,23 +41,26 @@ export const useCreateReview = () => {
       bookingId,
       rating,
       comment,
+      images,
     }: {
       serviceId: string;
       providerId: string;
       bookingId: string;
       rating: number;
       comment: string;
+      images?: string[];
     }) => {
       if (!user?.uid) {
         throw new Error('User must be logged in to create a review');
       }
       return createServiceReview(
-        serviceId, 
-        user.uid, 
-        providerId, 
-        bookingId, 
-        rating, 
-        comment
+        bookingId,    // 1st: bookingId
+        providerId,   // 2nd: providerId
+        user.uid,     // 3rd: customerId
+        serviceId,    // 4th: serviceId
+        rating,       // 5th: rating
+        comment,      // 6th: comment
+        images        // 7th: images
       );
     },
     onSuccess: (_, variables) => {

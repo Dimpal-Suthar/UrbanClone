@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useCustomerBookings } from '@/hooks/useBookings';
 import { useRole } from '@/hooks/useRole';
+import { showInfoMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -12,10 +14,10 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 const MENU_ITEMS = [
-  { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: 'edit-profile' },
+  { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'location-outline', label: 'Saved Addresses', screen: 'addresses' },
   { id: '3', icon: 'card-outline', label: 'Payment Methods', screen: 'payment-methods' },
-  { id: '4', icon: 'gift-outline', label: 'Rewards & Offers', screen: 'rewards', badge: '250 pts' },
+  { id: '4', icon: 'gift-outline', label: 'Rewards & Offers', screen: 'rewards' },
   { id: '5', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
   { id: '6', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
 ];
@@ -27,6 +29,14 @@ const ProfileScreen = observer(() => {
   const { isProvider, isAdmin } = useRole();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Fetch real user data
+  const { data: customerBookings = [], isLoading: loadingBookings } = useCustomerBookings(user?.uid || null);
+
+  // Calculate stats
+  const totalBookings = customerBookings.length;
+  const completedBookings = customerBookings.filter(booking => booking.status === 'completed').length;
+  const pendingBookings = customerBookings.filter(booking => ['pending', 'confirmed', 'in_progress'].includes(booking.status)).length;
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -47,6 +57,19 @@ const ProfileScreen = observer(() => {
         },
       },
     ]);
+  };
+
+  const handleMenuPress = (screen: string) => {
+    if (screen === '/profile/edit') {
+      router.push(screen);
+      return;
+    }
+    if (screen === 'edit-profile') {
+      showInfoMessage('Coming Soon', 'Edit profile feature will be available soon');
+      return;
+    }
+    // Add navigation logic for other menu items
+    console.log('Navigate to:', screen);
   };
 
   const displayName = userProfile?.displayName || user?.displayName || 'User';
@@ -93,16 +116,34 @@ const ProfileScreen = observer(() => {
         {/* Stats */}
         <View className="flex-row px-6 mb-6 gap-3">
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.primary }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Bookings</Text>
+            {loadingBookings ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.primary }}>
+                {totalBookings}
+              </Text>
+            )}
+            <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>Total Bookings</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Points</Text>
+            {loadingBookings ? (
+              <ActivityIndicator size="small" color={colors.success} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>
+                {completedBookings}
+              </Text>
+            )}
+            <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>Completed Bookings</Text>
           </Card>
           <Card variant="elevated" className="flex-1 items-center py-4">
-            <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>0</Text>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Reviews</Text>
+            {loadingBookings ? (
+              <ActivityIndicator size="small" color={colors.warning} />
+            ) : (
+              <Text className="text-2xl font-bold mb-1" style={{ color: colors.warning }}>
+                {pendingBookings}
+              </Text>
+            )}
+            <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>Pending Bookings</Text>
           </Card>
         </View>
 
@@ -161,7 +202,7 @@ const ProfileScreen = observer(() => {
         <View className="px-6 mb-6">
           <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>Account</Text>
           {MENU_ITEMS.map((item) => (
-            <Pressable key={item.id} className="active:opacity-70">
+            <Pressable key={item.id} onPress={() => handleMenuPress(item.screen)} className="active:opacity-70">
               <Card variant="default" className="mb-3">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center flex-1">
@@ -170,13 +211,6 @@ const ProfileScreen = observer(() => {
                       {item.label}
                     </Text>
                   </View>
-                  {item.badge && (
-                    <View className="px-3 py-1 rounded-full mr-2" style={{ backgroundColor: `${colors.primary}20` }}>
-                      <Text className="text-xs font-semibold" style={{ color: colors.primary }}>
-                        {item.badge}
-                      </Text>
-                    </View>
-                  )}
                   <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                 </View>
               </Card>

@@ -1,8 +1,9 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
-import { Alert, Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 interface ImagePickerBottomSheetProps {
   visible: boolean;
@@ -24,10 +25,9 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
     const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
-      Alert.alert(
+      showFailedMessage(
         'Permission Required',
-        'Camera and photo library permissions are required to upload images.',
-        [{ text: 'OK' }]
+        'Camera and photo library permissions are required to upload images.'
       );
       return false;
     }
@@ -52,7 +52,7 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
       }
     } catch (error) {
       console.error('Camera error:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      showFailedMessage('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -74,7 +74,7 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
       }
     } catch (error) {
       console.error('Gallery error:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      showFailedMessage('Error', 'Failed to select image. Please try again.');
     }
   };
 

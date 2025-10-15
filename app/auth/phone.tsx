@@ -2,11 +2,12 @@ import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
 const PhoneAuthScreen = observer(() => {
   const router = useRouter();
@@ -18,7 +19,7 @@ const PhoneAuthScreen = observer(() => {
 
   const handleSendOTP = async () => {
     if (phoneNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      showFailedMessage('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -37,7 +38,7 @@ const PhoneAuthScreen = observer(() => {
       
       // Show user-friendly error message
       const errorMessage = err.message || 'Failed to send OTP. Please try again.';
-      Alert.alert('Error', errorMessage);
+      showFailedMessage('Error', errorMessage);
     }
   };
 

@@ -61,17 +61,30 @@ export class AuthStore {
   /**
    * Load user profile from Firestore
    */
-  private async loadUserProfile(uid: string) {
+  async loadUserProfile(uid: string) {
     try {
+      console.log('🔄 Loading user profile for UID:', uid);
       const profile = await authService.getUserProfile(uid);
       runInAction(() => {
         this.userProfile = profile;
       });
+      console.log('✅ User profile loaded successfully');
     } catch (error) {
       console.error('Error loading user profile:', error);
       // Don't set userProfile to null on error, keep existing value
       // This prevents unnecessary redirects to auth screens
     }
+  }
+
+  /**
+   * Refresh current user's profile (public method for external use)
+   */
+  async refreshUserProfile() {
+    if (!this.user?.uid) {
+      console.warn('⚠️ Cannot refresh profile: No user logged in');
+      return;
+    }
+    await this.loadUserProfile(this.user.uid);
   }
 
   // ========== EMAIL AUTHENTICATION ==========

@@ -1,5 +1,5 @@
-import { View, ViewProps } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { View, ViewProps } from 'react-native';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ export function Card({ children, variant = 'default', style, ...props }: CardPro
     <View
       style={[
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           borderColor: colors.border,
           borderWidth: 0.5,
           borderRadius: 16,

@@ -15,7 +15,8 @@ export const createProviderReview = async (
   customerId: string,
   serviceId: string,
   rating: number,
-  comment: string
+  comment: string,
+  images?: string[]
 ): Promise<ProviderReview> => {
   console.log('📝 Creating provider review:', {
     bookingId,
@@ -24,6 +25,7 @@ export const createProviderReview = async (
     serviceId,
     rating,
     comment: comment.trim(),
+    images: images || [],
     collection: COLLECTION_NAME
   });
 
@@ -34,6 +36,7 @@ export const createProviderReview = async (
     serviceId,
     rating,
     comment: comment.trim(),
+    images: images || [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -127,46 +130,124 @@ export const getServiceReviews = async (serviceId: string): Promise<ProviderRevi
 
 // Get all reviews for a specific provider
 export const getProviderReviews = async (providerId: string): Promise<ProviderReview[]> => {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    where('providerId', '==', providerId),
-    orderBy('createdAt', 'desc')
-  );
+  console.log('🔍 getProviderReviews - providerId:', providerId);
+  console.log('🔍 Collection name:', COLLECTION_NAME);
+  
+  try {
+    // First, let's check ALL reviews to see what providerIds exist
+    const allReviewsQuery = query(collection(db, COLLECTION_NAME));
+    const allReviewsSnapshot = await getDocs(allReviewsQuery);
+    console.log('📊 Total reviews in collection:', allReviewsSnapshot.docs.length);
+    
+    if (allReviewsSnapshot.docs.length > 0) {
+      console.log('📝 Sample review providerIds:');
+      allReviewsSnapshot.docs.slice(0, 5).forEach(doc => {
+        const data = doc.data();
+        console.log(`  - Review ${doc.id}: providerId = "${data.providerId}"`);
+      });
+    }
+    
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('providerId', '==', providerId),
+      orderBy('createdAt', 'desc')
+    );
 
-  const querySnapshot = await getDocs(q);
-  
-  // Fetch customer details for each review
-  const reviewsWithCustomerDetails = await Promise.all(
-    querySnapshot.docs.map(async (reviewDoc) => {
-      const data = reviewDoc.data();
-      
-      // Fetch customer details
-      let customerName = 'Anonymous User';
-      let customerPhoto = null;
-      
-      try {
-        const customerDoc = await getDoc(doc(db, 'users', data.customerId));
-        if (customerDoc.exists()) {
-          const customerData = customerDoc.data();
-          customerName = customerData.name || customerData.displayName || customerData.email?.split('@')[0] || 'Anonymous User';
-          customerPhoto = customerData.photoURL || null;
+    console.log('📋 Query created for provider reviews, executing...');
+    const querySnapshot = await getDocs(q);
+    console.log('📄 Provider reviews query snapshot size:', querySnapshot.docs.length);
+    
+    // Fetch customer details for each review
+    const reviewsWithCustomerDetails = await Promise.all(
+      querySnapshot.docs.map(async (reviewDoc) => {
+        const data = reviewDoc.data();
+        console.log('📝 Review document:', reviewDoc.id, data);
+        
+        // Fetch customer details
+        let customerName = 'Anonymous User';
+        let customerPhoto = null;
+        
+        try {
+          const customerDoc = await getDoc(doc(db, 'users', data.customerId));
+          if (customerDoc.exists()) {
+            const customerData = customerDoc.data();
+            customerName = customerData.name || customerData.displayName || customerData.email?.split('@')[0] || 'Anonymous User';
+            customerPhoto = customerData.photoURL || null;
+          }
+        } catch (error) {
+          console.error('Error fetching customer details:', error);
         }
-      } catch (error) {
-        console.error('Error fetching customer details:', error);
-      }
+        
+        return {
+          id: reviewDoc.id,
+          ...data,
+          customerName,
+          customerPhoto,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+        };
+      })
+    );
+    
+    console.log('📊 getProviderReviews - returning reviews:', reviewsWithCustomerDetails.length, reviewsWithCustomerDetails);
+    return reviewsWithCustomerDetails as ProviderReview[];
+  } catch (error) {
+    console.error('❌ Error fetching provider reviews:', error);
+    // If orderBy fails (no index), try without orderBy
+    console.log('⚠️ Retrying without orderBy...');
+    try {
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where('providerId', '==', providerId)
+      );
       
-      return {
-        id: reviewDoc.id,
-        ...data,
-        customerName,
-        customerPhoto,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      };
-    })
-  );
-  
-  return reviewsWithCustomerDetails as ProviderReview[];
+      const querySnapshot = await getDocs(q);
+      console.log('📄 Provider reviews (no orderBy) snapshot size:', querySnapshot.docs.length);
+      
+      const reviewsWithCustomerDetails = await Promise.all(
+        querySnapshot.docs.map(async (reviewDoc) => {
+          const data = reviewDoc.data();
+          
+          // Fetch customer details
+          let customerName = 'Anonymous User';
+          let customerPhoto = null;
+          
+          try {
+            const customerDoc = await getDoc(doc(db, 'users', data.customerId));
+            if (customerDoc.exists()) {
+              const customerData = customerDoc.data();
+              customerName = customerData.name || customerData.displayName || customerData.email?.split('@')[0] || 'Anonymous User';
+              customerPhoto = customerData.photoURL || null;
+            }
+          } catch (error) {
+            console.error('Error fetching customer details:', error);
+          }
+          
+          return {
+            id: reviewDoc.id,
+            ...data,
+            customerName,
+            customerPhoto,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          };
+        })
+      );
+      
+      // Sort manually by createdAt
+      reviewsWithCustomerDetails.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+        const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+        return dateB - dateA; // desc order
+      });
+      
+      console.log('✅ Returning reviews (manually sorted):', reviewsWithCustomerDetails.length);
+      return reviewsWithCustomerDetails as ProviderReview[];
+    } catch (fallbackError) {
+      console.error('❌ Fallback query also failed:', fallbackError);
+      return [];
+    }
+  }
 };
 
 // Get all reviews written by a specific customer

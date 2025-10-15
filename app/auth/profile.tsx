@@ -10,7 +10,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } fro
 const ProfileSetupScreen = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
-  const { updateProfile, loading, error } = useAuth();
+  const { updateProfile, loading, error, userProfile } = useAuth();
   
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -26,8 +26,15 @@ const ProfileSetupScreen = observer(() => {
         email: email.trim() || undefined,
       });
       
-      // Navigate to home
-      router.replace('/(tabs)');
+      // Navigate based on user role
+      const role = userProfile?.role || 'customer';
+      if (role === 'admin') {
+        router.replace('/(admin)/dashboard');
+      } else if (role === 'provider') {
+        router.replace('/(provider)/dashboard');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
       console.error('Update profile error:', err);
     }

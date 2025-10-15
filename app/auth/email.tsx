@@ -3,11 +3,12 @@ import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 const EmailAuthScreen = observer(() => {
   const router = useRouter();
@@ -31,7 +32,7 @@ const EmailAuthScreen = observer(() => {
 
   const handleSubmit = async () => {
     if (!email || !password || (isSignUp && !name)) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showFailedMessage('Error', 'Please fill in all fields');
       return;
     }
 
@@ -45,11 +46,11 @@ const EmailAuthScreen = observer(() => {
         console.log('✅ Signup complete');
         
         if (wantsToBecomeProvider) {
-          Alert.alert(
+          showSuccessMessage(
             'Application Submitted!',
-            'Your provider application will be reviewed within 24-48 hours. Meanwhile, you can use the app as a customer.',
-            [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
+            'Your provider application will be reviewed within 24-48 hours. Meanwhile, you can use the app as a customer.'
           );
+          setTimeout(() => router.replace('/(tabs)'), 2000);
         } else {
           router.replace('/(tabs)');
         }
@@ -71,7 +72,7 @@ const EmailAuthScreen = observer(() => {
         }
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      showFailedMessage('Error', err.message);
     }
   };
 

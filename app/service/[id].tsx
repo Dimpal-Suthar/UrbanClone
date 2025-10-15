@@ -5,7 +5,7 @@ import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { db } from '@/config/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useProvidersForService } from '@/hooks/useProviders';
-import { useServiceReviews } from '@/hooks/useReviews';
+import { useProviderReviews, useServiceReviews } from '@/hooks/useReviews';
 import { useService } from '@/hooks/useServices';
 import { ProviderServiceOffering } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,50 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import React from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+
+// Component to display provider rating with dynamic data
+const ProviderRatingCard = ({ providerId }: { providerId: string }) => {
+  const { colors } = useTheme();
+  const { data: reviews = [], isLoading } = useProviderReviews(providerId);
+  
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length)
+    : 0;
+  
+  if (isLoading) {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={{ fontSize: 12, marginLeft: 8, color: colors.textSecondary }}>
+          Loading reviews...
+        </Text>
+      </View>
+    );
+  }
+  
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
+      {reviews.length > 0 ? (
+        <>
+          <Ionicons name="star" size={14} color="#FFD700" />
+          <Text style={{ fontSize: 14, marginLeft: 4, color: colors.text }}>
+            {averageRating.toFixed(1)}
+          </Text>
+          <Text style={{ fontSize: 12, marginLeft: 4, color: colors.textSecondary }}>
+            ({reviews.length} reviews)
+          </Text>
+          <Text style={{ fontSize: 12, marginLeft: 8, color: colors.textSecondary }}>
+            •
+          </Text>
+        </>
+      ) : (
+        <Text style={{ fontSize: 12, color: colors.textSecondary, marginRight: 8 }}>
+          No reviews yet •
+        </Text>
+      )}
+    </View>
+  );
+};
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -205,12 +249,15 @@ export default function ServiceDetailScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
                 <Ionicons name="star" size={20} color="#FFB800" />
-                <Text style={{ fontSize: 16, marginLeft: 4, fontWeight: '600', color: colors.text }}>
-                  {reviews.length > 0 
-                    ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
-                    : '0.0'
-                  }
-                </Text>
+                {reviews.length > 0 ? (
+                  <Text style={{ fontSize: 16, marginLeft: 4, fontWeight: '600', color: colors.text }}>
+                    {(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)}
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 14, marginLeft: 4, color: colors.textSecondary }}>
+                    No reviews
+                  </Text>
+                )}
                 <Text style={{ fontSize: 14, marginLeft: 4, color: colors.textSecondary }}>
                   ({reviews.length} reviews)
                 </Text>
@@ -351,18 +398,7 @@ export default function ServiceDetailScreen() {
                           <Text style={{ fontSize: 14, marginBottom: 4, color: colors.textSecondary }} numberOfLines={2}>
                             {offering?.description || provider.bio || 'Professional service provider'}
                           </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                            <Ionicons name="star" size={14} color="#FFB800" />
-                            <Text style={{ fontSize: 14, marginLeft: 4, color: colors.text }}>
-                              {offering?.rating?.toFixed(1) || provider.rating?.toFixed(1) || '0.0'}
-                            </Text>
-                            <Text style={{ fontSize: 12, marginLeft: 8, color: colors.textSecondary }}>
-                              ({offering?.reviewCount || provider.reviewCount || 0} reviews)
-                            </Text>
-                            <Text style={{ fontSize: 12, marginLeft: 8, color: colors.textSecondary }}>
-                              • {offering?.completedJobs || provider.completedJobs || 0} jobs
-                            </Text>
-                          </View>
+                          <ProviderRatingCard providerId={provider.id} />
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                               <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
@@ -525,6 +561,19 @@ export default function ServiceDetailScreen() {
                         <Text style={{ fontSize: 14, color: colors.text, marginBottom: 8 }}>
                           {review.comment}
                         </Text>
+                        
+                        {/* Review Images */}
+                        {review.images && review.images.length > 0 && (
+                          <View style={{ marginBottom: 8 }}>
+                            <ImageCarousel
+                              images={review.images}
+                              height={100}
+                              showIndicators={true}
+                              showFullScreen={true}
+                            />
+                          </View>
+                        )}
+                        
                         <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                           {new Date(review.createdAt).toLocaleDateString()}
                         </Text>
@@ -546,39 +595,18 @@ export default function ServiceDetailScreen() {
         borderTopColor: colors.border,
         backgroundColor: colors.surface,
       }}>
-        <View style={{ flexDirection: 'row', gap: 12 , justifyContent: 'space-between' }}>
-          <View style={{ flex: 1 }}> 
-          <Button
-            title="Book Now"
-            onPress={() => console.log('Book service')}
-          />
-          </View>
-          <View style={{flex:1}}> 
-          <Button
-            title="Track Service"
-            variant="outline"
-            onPress={() => {
-              console.log('🚀 Button pressed - Track Service');
-              console.log('🚀 Current id:', id);
-              console.log('🚀 Navigation path:', `/tracking/${id}`);
-              console.log('🚀 Router available:', !!router);
-              
-              // Terminal log - will show in Metro bundler
-              console.warn('🔥 TRACKING BUTTON PRESSED - ID:', id);
-              
-              try {
-                router.push('/tracking');
-                console.log('✅ Navigation command sent successfully');
-                console.warn('🔥 NAVIGATION SUCCESS - Path: /tracking');
-              } catch (error) {
-                console.log('❌ Navigation error:', error);
-                console.warn('🔥 NAVIGATION ERROR:', error);
-                Alert.alert('Navigation Error', String(error));
-              }
-            }}
-          />
-          </View>
-        </View>
+        <Button
+          title="Book Now"
+          onPress={() => {
+            router.push({
+              pathname: '/booking/schedule',
+              params: { 
+                serviceId: id as string,
+              },
+            });
+          }}
+          icon="calendar"
+        />
       </View>
 
     </Container>

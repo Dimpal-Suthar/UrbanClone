@@ -20,7 +20,7 @@ const ProviderEarningsScreen = observer(() => {
   ];
 
   return (
-    <Container>
+    <Container safeArea edges={['top', 'bottom']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-4 pb-4">

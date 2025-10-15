@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -17,6 +18,7 @@ const AdminSettings = observer(() => {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = () => {
+    // Keep Alert for critical logout confirmation
     Alert.alert('Logout', 'Are you sure you want to logout from admin panel?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -29,7 +31,7 @@ const AdminSettings = observer(() => {
             router.replace('/auth/select');
           } catch (error) {
             console.error('Logout error:', error);
-            Alert.alert('Error', 'Failed to logout. Please try again.');
+            showFailedMessage('Logout Failed', 'Failed to logout. Please try again.');
           } finally {
             setLoggingOut(false);
           }

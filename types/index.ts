@@ -17,6 +17,14 @@ export interface User {
   reviewCount?: number;
   completedJobs?: number;
   isAvailable?: boolean;
+  
+  // Additional fields for all users
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface UserLocation {
@@ -138,22 +146,101 @@ export type ServiceReview = ProviderReview;
 
 export interface Booking {
   id: string;
-  userId: string;
-  professionalId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerPhoto?: string;
+  providerId: string;
+  providerName: string;
+  providerPhone: string;
+  providerPhoto?: string;
   serviceId: string;
+  serviceName: string;
+  serviceCategory: ServiceCategory;
   status: BookingStatus;
-  date: string;
-  time: string;
-  address: string;
-  totalPrice: number;
+  scheduledDate: string; // ISO date string
+  scheduledTime: string; // e.g., "10:00 AM"
+  scheduledSlot: TimeSlot; // For better time management
+  address: BookingAddress;
+  price: number;
+  notes?: string; // Customer's special instructions
+  images?: string[]; // Before/after service images
+  cancellationReason?: string;
+  completedAt?: any;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface BookingAddress {
+  street: string;
+  apartment?: string; // apartment/flat number
+  city: string;
+  state: string;
+  pincode: string;
+  landmark?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export type BookingStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'in-progress'
-  | 'completed'
-  | 'cancelled';
+  | 'pending' // Waiting for provider acceptance
+  | 'accepted' // Provider accepted
+  | 'confirmed' // Confirmed and scheduled
+  | 'on-the-way' // Provider is on the way
+  | 'in-progress' // Service in progress
+  | 'completed' // Service completed
+  | 'cancelled' // Cancelled by customer or provider
+  | 'rejected'; // Rejected by provider
+
+export type TimeSlot = 
+  | '08:00 AM - 09:00 AM'
+  | '09:00 AM - 10:00 AM'
+  | '10:00 AM - 11:00 AM'
+  | '11:00 AM - 12:00 PM'
+  | '12:00 PM - 01:00 PM'
+  | '01:00 PM - 02:00 PM'
+  | '02:00 PM - 03:00 PM'
+  | '03:00 PM - 04:00 PM'
+  | '04:00 PM - 05:00 PM'
+  | '05:00 PM - 06:00 PM'
+  | '06:00 PM - 07:00 PM'
+  | '07:00 PM - 08:00 PM';
+
+export interface CreateBookingInput {
+  customerId: string;
+  providerId: string;
+  serviceId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  scheduledSlot: TimeSlot;
+  address: BookingAddress;
+  notes?: string;
+}
+
+export interface UpdateBookingInput {
+  status?: BookingStatus;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  scheduledSlot?: TimeSlot;
+  address?: BookingAddress;
+  notes?: string;
+  cancellationReason?: string;
+  images?: string[];
+}
+
+export interface UpdateUserInput {
+  name?: string;
+  displayName?: string;
+  phone?: string;
+  photoURL?: string;
+  bio?: string;
+  experience?: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  isAvailable?: boolean;
+}
 
 export interface Message {
   id: string;
@@ -176,5 +263,50 @@ export interface Theme {
     error: string;
     warning: string;
   };
+}
+
+// ========== AVAILABILITY TYPES ==========
+
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface DaySchedule {
+  isAvailable: boolean;
+  slots: TimeSlot[];
+}
+
+export interface WeeklySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
+export interface ProviderAvailability {
+  id: string; // providerId
+  providerId: string;
+  weeklySchedule: WeeklySchedule;
+  customDaysOff: string[]; // ISO date strings for specific days off
+  bookingBuffer: number; // Minutes buffer between bookings (default: 30)
+  advanceBookingDays: number; // How many days ahead customers can book (default: 30)
+  isAcceptingBookings: boolean; // Global toggle for accepting bookings
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface AvailabilityCheckResult {
+  isAvailable: boolean;
+  availableSlots: TimeSlot[];
+  reason?: string; // Why unavailable (e.g., "Provider is off on this day", "Slot already booked")
+}
+
+export interface UpdateAvailabilityInput {
+  weeklySchedule?: WeeklySchedule;
+  customDaysOff?: string[];
+  bookingBuffer?: number;
+  advanceBookingDays?: number;
+  isAcceptingBookings?: boolean;
 }
 

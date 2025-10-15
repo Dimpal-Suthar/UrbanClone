@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { db } from '@/config/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
+import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
@@ -62,6 +63,7 @@ const AdminProvidersScreen = observer(() => {
   });
 
   const handleApprove = async (userId: string) => {
+    // Keep Alert for critical approval confirmation
     Alert.alert(
       'Approve Provider',
       'Are you sure you want to approve this provider?',
@@ -85,13 +87,13 @@ const AdminProvidersScreen = observer(() => {
                 updatedAt: serverTimestamp(),
               });
               
-              Alert.alert('Success', 'Provider approved! They will see Provider App on next login.');
+              showSuccessMessage('Provider Approved', 'They will see Provider App on next login');
               refetch();
             } catch (error: any) {
               console.error('Approval error:', error);
-              Alert.alert(
-                'Permission Error',
-                'Firestore security rules need to be updated.\n\nPlease update your Firestore rules to allow admins to edit users and providers collections.\n\nError: ' + error.message
+              showFailedMessage(
+                'Approval Failed',
+                'Please check Firestore rules for admin permissions'
               );
             } finally {
               setProcessingAction(null);
@@ -103,6 +105,7 @@ const AdminProvidersScreen = observer(() => {
   };
 
   const handleReject = async (userId: string) => {
+    // Keep Alert for critical rejection confirmation
     Alert.alert(
       'Reject Provider',
       'Are you sure you want to reject this application?',
@@ -120,13 +123,13 @@ const AdminProvidersScreen = observer(() => {
                 rejectedAt: serverTimestamp(),
               });
               
-              Alert.alert('Success', 'Provider application rejected');
+              showSuccessMessage('Application Rejected', 'Provider application has been rejected');
               refetch();
             } catch (error: any) {
               console.error('Rejection error:', error);
-              Alert.alert(
-                'Permission Error',
-                'Firestore security rules need to be updated.\n\nError: ' + error.message
+              showFailedMessage(
+                'Rejection Failed',
+                'Please check Firestore rules for admin permissions'
               );
             } finally {
               setProcessingAction(null);

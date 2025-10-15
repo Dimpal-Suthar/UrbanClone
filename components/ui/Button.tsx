@@ -1,12 +1,13 @@
-import { Pressable, Text, ActivityIndicator, PressableProps } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable, PressableProps, Text } from 'react-native';
 
 interface ButtonProps extends PressableProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
-  icon?: React.ReactNode;
+  icon?: string; // Changed to string for icon name
 }
 
 export function Button({ 
@@ -85,13 +86,19 @@ export function Button({
         <ActivityIndicator color={getTextColor()} />
       ) : (
         <>
-          {icon && <>{icon}</>}
+          {icon && (
+            <Ionicons 
+              name={icon as any} 
+              size={size === 'sm' ? 16 : size === 'lg' ? 20 : 18} 
+              color={getTextColor()} 
+              style={{ marginRight: 8 }}
+            />
+          )}
           <Text 
             style={{ 
               fontWeight: '600', 
               fontSize: size === 'sm' ? 14 : size === 'lg' ? 18 : 16,
-              color: getTextColor(), 
-              marginLeft: icon ? 8 : 0 
+              color: getTextColor()
             }}
           >
             {title}

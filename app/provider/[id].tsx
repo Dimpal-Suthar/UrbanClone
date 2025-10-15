@@ -4,8 +4,10 @@ import { Container } from '@/components/ui/Container';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useProvidersForService } from '@/hooks/useProviders';
+import { useProviderReviews } from '@/hooks/useReviews';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 export default function ProviderDetailScreen() {
@@ -18,6 +20,42 @@ export default function ProviderDetailScreen() {
   const { data: providers = [], isLoading: loadingProviders } = useProvidersForService('NYcfW3AUGAGrdLx3jcaw'); // You'll need to pass the service ID
   
   const provider = providers.find(p => p.id === id);
+  
+  // Fetch provider reviews
+  const { data: reviews = [], isLoading: loadingReviews } = useProviderReviews(id as string);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔍 Provider Details Debug:');
+    console.log('  - Provider ID:', id);
+    console.log('  - Provider found:', !!provider);
+    console.log('  - Reviews loading:', loadingReviews);
+    console.log('  - Reviews count:', reviews.length);
+    console.log('  - Reviews data:', reviews);
+  }, [id, provider, loadingReviews, reviews]);
+
+  // Calculate average rating from reviews
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) 
+    : 0;
+
+  // Debug: Log review data to see what we're getting
+  React.useEffect(() => {
+    if (reviews.length > 0) {
+      console.log('🔍 Review Debug Data:');
+      reviews.forEach((review, index) => {
+        console.log(`Review ${index + 1}:`, {
+          id: review.id,
+          customerName: review.customerName,
+          customerPhoto: review.customerPhoto,
+          customerId: review.customerId,
+          providerId: review.providerId,
+          rating: review.rating,
+          comment: review.comment?.substring(0, 50) + '...',
+        });
+      });
+    }
+  }, [reviews]);
 
   // Helper function to get initials
   const getInitials = (name: string) => {
@@ -128,15 +166,21 @@ export default function ProviderDetailScreen() {
                 <Text style={{ fontSize: 16, marginBottom: 8, color: colors.textSecondary }}>
                   Professional Service Provider
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="star" size={16} color="#FFB800" />
-                  <Text style={{ fontSize: 16, marginLeft: 4, color: colors.text }}>
-                    {offering?.rating?.toFixed(1) || provider.rating?.toFixed(1) || '0.0'}
+                {reviews.length > 0 ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                    <Text style={{ fontSize: 16, marginLeft: 4, fontWeight: '600', color: colors.text }}>
+                      {averageRating.toFixed(1)}
+                    </Text>
+                    <Text style={{ fontSize: 14, marginLeft: 8, color: colors.textSecondary }}>
+                      ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+                    No reviews yet
                   </Text>
-                  <Text style={{ fontSize: 14, marginLeft: 8, color: colors.textSecondary }}>
-                    ({offering?.reviewCount || provider.reviewCount || 0} reviews)
-                  </Text>
-                </View>
+                )}
               </View>
             </View>
 
@@ -202,13 +246,171 @@ export default function ProviderDetailScreen() {
             </Card>
           )}
 
+          {/* Reviews Section */}
+          <Card variant="elevated" style={{ marginBottom: 24, padding: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
+                Reviews & Ratings
+              </Text>
+              {reviews.length > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="star" size={18} color="#FFD700" />
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginLeft: 4 }}>
+                    {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: colors.textSecondary, marginLeft: 4 }}>
+                    ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {loadingReviews ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 8 }}>
+                  Loading reviews...
+                </Text>
+              </View>
+            ) : reviews.length === 0 ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <Ionicons name="chatbox-outline" size={48} color={colors.textSecondary} />
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 12 }}>
+                  No Reviews Yet
+                </Text>
+                <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4, textAlign: 'center' }}>
+                  Be the first to review this provider
+                </Text>
+              </View>
+            ) : (
+              <View>
+                {reviews.slice(0, 3).map((review, index) => (
+                  <View
+                    key={review.id}
+                    style={{
+                      paddingVertical: 16,
+                      borderTopWidth: index > 0 ? 1 : 0,
+                      borderTopColor: colors.border,
+                    }}
+                  >
+                    {/* Review Header */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        {/* Customer Avatar */}
+                        {review.customerPhoto ? (
+                          <Image
+                            source={{ uri: review.customerPhoto }}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              backgroundColor: colors.surface,
+                            }}
+                          />
+                        ) : (
+                          <View
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              backgroundColor: colors.primary,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: 'white' }}>
+                              {getInitials(review.customerName && review.customerName !== 'Anonymous User' 
+                                ? review.customerName 
+                                : 'Anonymous Customer')}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={{ marginLeft: 12, flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
+                            {review.customerName && review.customerName !== 'Anonymous User' 
+                              ? review.customerName 
+                              : 'Anonymous Customer'}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                            {new Date(review.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      </View>
+                      {/* Rating Stars */}
+                      <View style={{ flexDirection: 'row' }}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Ionicons
+                            key={i}
+                            name={i < review.rating ? 'star' : 'star-outline'}
+                            size={16}
+                            color="#FFD700"
+                            style={{ marginLeft: 2 }}
+                          />
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Review Comment */}
+                    {review.comment && (
+                      <Text style={{ fontSize: 14, color: colors.text, lineHeight: 20 }}>
+                        {review.comment}
+                      </Text>
+                    )}
+
+                    {/* Review Images */}
+                    {review.images && review.images.length > 0 && (
+                      <View style={{ marginTop: 12 }}>
+                        <ImageCarousel
+                          images={review.images}
+                          height={120}
+                          showIndicators={true}
+                          showFullScreen={true}
+                        />
+                      </View>
+                    )}
+                  </View>
+                ))}
+
+                {/* View All Reviews Button */}
+                {reviews.length > 3 && (
+                  <Pressable
+                    onPress={() => {
+                      router.push(`/provider/reviews/${id}`);
+                    }}
+                    style={{
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      marginTop: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: colors.border,
+                    }}
+                    className="active:opacity-70"
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: colors.primary }}>
+                      View All {reviews.length} Reviews →
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </Card>
+
           {/* Contact Actions */}
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
             <Button
               title="Book Service"
               onPress={() => {
-                // TODO: Navigate to booking screen
-                console.log('Book service with provider:', provider.id);
+                // Navigate to booking flow with preselected provider
+                router.push({
+                  pathname: '/booking/schedule',
+                  params: {
+                    serviceId: offering?.serviceId || 'default-service',
+                    providerId: provider.id,
+                    providerName: providerName,
+                    serviceName: 'Professional Service',
+                    price: offering?.customPrice || 0
+                  }
+                });
               }}
               className="flex-1"
             />
@@ -216,8 +418,8 @@ export default function ProviderDetailScreen() {
               title="Message"
               variant="outline"
               onPress={() => {
-                // TODO: Navigate to chat screen
-                console.log('Message provider:', provider.id);
+                // Navigate to chat screen with provider
+                router.push(`/chat/${provider.id}`);
               }}
               className="flex-1"
             />
