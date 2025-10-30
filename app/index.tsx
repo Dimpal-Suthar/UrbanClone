@@ -67,7 +67,7 @@ export default function SplashScreen() {
       return <Redirect href="/(admin)/dashboard" />;
     }
     if (userProfile.role === 'provider') {
-      return <Redirect href="/(provider)/dashboard" />;
+      return <Redirect href="/(provider)/(tabs)/dashboard" />;
     }
     return <Redirect href="/(tabs)" />;  // Customer
   }
@@ -87,6 +87,6 @@ export default function SplashScreen() {
   
   // No user - redirect to auth
   console.log('❌ No user, redirecting to auth');
-  if (hasSeenOnboarding) return <Redirect href="/auth/select" />;
+  if (hasSeenOnboarding) return <Redirect href="/auth/email" />;
   return <Redirect href="/onboarding" />;
 }

@@ -16,16 +16,11 @@ export const useAuth = () => {
     error: authStore.error,
     isAuthenticated: authStore.isAuthenticated,
     hasSeenOnboarding: authStore.hasSeenOnboarding,
-    phoneNumber: authStore.phoneNumber,
     
     // Email Auth Actions
     signUpWithEmail: authStore.signUpWithEmail.bind(authStore),
     signInWithEmail: authStore.signInWithEmail.bind(authStore),
     resetPassword: authStore.resetPassword.bind(authStore),
-    
-    // Phone Auth Actions
-    sendOTP: authStore.sendOTP.bind(authStore),
-    verifyOTP: authStore.verifyOTP.bind(authStore),
     
     // Common Actions
     updateProfile: authStore.updateProfile.bind(authStore),

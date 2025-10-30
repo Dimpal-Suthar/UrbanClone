@@ -13,6 +13,15 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import {
+  notifyBookingAccepted,
+  notifyBookingCancelled,
+  notifyBookingCompleted,
+  notifyBookingCreated,
+  notifyBookingOnTheWay,
+  notifyBookingRejected,
+  notifyBookingStarted,
+} from '@/utils/pushNotifications';
 
 /**
  * Create a new booking
@@ -52,6 +61,15 @@ export const createBooking = async (
 
     const docRef = await addDoc(collection(db, 'bookings'), bookingData);
     console.log('✅ Booking created with ID:', docRef.id);
+
+    // Send push notification to provider
+    await notifyBookingCreated(
+      input.providerId,
+      docRef.id,
+      customerData.name,
+      serviceData.name
+    );
+
     return docRef.id;
   } catch (error) {
     console.error('❌ Error creating booking:', error);
@@ -244,11 +262,32 @@ export const updateBookingStatus = async (
  */
 export const cancelBooking = async (
   bookingId: string,
-  reason: string
+  reason: string,
+  cancelledByUserId?: string
 ): Promise<void> => {
   try {
     await updateBookingStatus(bookingId, 'cancelled', reason);
     console.log('✅ Booking cancelled:', bookingId);
+
+    // Send push notification to the other party
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      const recipientId = cancelledByUserId === booking.customerId
+        ? booking.providerId // Customer cancelled - notify provider
+        : booking.customerId; // Provider cancelled - notify customer
+
+      const cancelledByName = cancelledByUserId === booking.customerId
+        ? booking.customerName || 'Customer'
+        : booking.providerName || 'Provider';
+
+      await notifyBookingCancelled(
+        recipientId,
+        bookingId,
+        cancelledByName,
+        booking.serviceName || 'Service',
+        reason
+      );
+    }
   } catch (error) {
     console.error('❌ Error cancelling booking:', error);
     throw error;
@@ -262,6 +301,17 @@ export const acceptBooking = async (bookingId: string): Promise<void> => {
   try {
     await updateBookingStatus(bookingId, 'accepted');
     console.log('✅ Booking accepted:', bookingId);
+
+    // Send push notification to customer
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      await notifyBookingAccepted(
+        booking.customerId,
+        bookingId,
+        booking.providerName || 'Provider',
+        booking.serviceName || 'Service'
+      );
+    }
   } catch (error) {
     console.error('❌ Error accepting booking:', error);
     throw error;
@@ -275,6 +325,18 @@ export const rejectBooking = async (bookingId: string, reason: string): Promise<
   try {
     await updateBookingStatus(bookingId, 'rejected', reason);
     console.log('✅ Booking rejected:', bookingId);
+
+    // Send push notification to customer
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      await notifyBookingRejected(
+        booking.customerId,
+        bookingId,
+        booking.providerName || 'Provider',
+        booking.serviceName || 'Service',
+        reason
+      );
+    }
   } catch (error) {
     console.error('❌ Error rejecting booking:', error);
     throw error;
@@ -288,6 +350,17 @@ export const startService = async (bookingId: string): Promise<void> => {
   try {
     await updateBookingStatus(bookingId, 'in-progress');
     console.log('✅ Service started:', bookingId);
+
+    // Send push notification to customer
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      await notifyBookingStarted(
+        booking.customerId,
+        bookingId,
+        booking.providerName || 'Provider',
+        booking.serviceName || 'Service'
+      );
+    }
   } catch (error) {
     console.error('❌ Error starting service:', error);
     throw error;
@@ -310,6 +383,17 @@ export const completeBooking = async (
     }
     await updateBooking(bookingId, updates);
     console.log('✅ Booking completed:', bookingId);
+
+    // Send push notification to customer
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      await notifyBookingCompleted(
+        booking.customerId,
+        bookingId,
+        booking.providerName || 'Provider',
+        booking.serviceName || 'Service'
+      );
+    }
   } catch (error) {
     console.error('❌ Error completing booking:', error);
     throw error;
@@ -323,6 +407,17 @@ export const markOnTheWay = async (bookingId: string): Promise<void> => {
   try {
     await updateBookingStatus(bookingId, 'on-the-way');
     console.log('✅ Provider marked on the way:', bookingId);
+
+    // Send push notification to customer
+    const booking = await getBookingById(bookingId);
+    if (booking) {
+      await notifyBookingOnTheWay(
+        booking.customerId,
+        bookingId,
+        booking.providerName || 'Provider',
+        booking.serviceName || 'Service'
+      );
+    }
   } catch (error) {
     console.error('❌ Error marking on the way:', error);
     throw error;

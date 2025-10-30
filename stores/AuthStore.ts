@@ -11,10 +11,6 @@ export class AuthStore {
   loading = true;
   error: string | null = null;
   
-  // Phone auth state
-  verificationId: string | null = null;
-  phoneNumber: string = '';
-  
   // Onboarding state
   hasSeenOnboarding = false;
 
@@ -165,68 +161,6 @@ export class AuthStore {
       });
     } catch (error: any) {
       console.error('ResetPassword error:', error.message);
-      runInAction(() => {
-        this.error = error.message;
-        this.loading = false;
-      });
-      throw error;
-    }
-  }
-
-  // ========== PHONE AUTHENTICATION ==========
-
-  /**
-   * Send OTP to phone number
-   */
-  async sendOTP(phoneNumber: string, recaptchaVerifier: any): Promise<void> {
-    try {
-      runInAction(() => {
-        this.loading = true;
-        this.error = null;
-        this.phoneNumber = phoneNumber;
-      });
-
-      const verificationId = await authService.sendOTP(phoneNumber, recaptchaVerifier);
-      
-      runInAction(() => {
-        this.verificationId = verificationId;
-        this.loading = false;
-      });
-    } catch (error: any) {
-      console.error('SendOTP error:', error.message);
-      runInAction(() => {
-        this.error = error.message;
-        this.loading = false;
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Verify OTP code
-   */
-  async verifyOTP(code: string): Promise<{ isComplete: boolean; profile: UserProfile }> {
-    if (!this.verificationId) {
-      throw new Error('No verification ID found');
-    }
-
-    try {
-      runInAction(() => {
-        this.loading = true;
-        this.error = null;
-      });
-
-      const profile = await authService.verifyOTP(this.verificationId, code);
-      
-      runInAction(() => {
-        this.userProfile = profile;
-        this.loading = false;
-        this.verificationId = null;
-      });
-      
-      return { isComplete: this.isProfileComplete(), profile };
-    } catch (error: any) {
-      console.error('VerifyOTP error:', error.message);
       runInAction(() => {
         this.error = error.message;
         this.loading = false;

@@ -4,9 +4,10 @@ import { Container } from '@/components/ui/Container';
 import { db } from '@/config/firebase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
+import { notifyServiceApproved, notifyServiceRejected } from '@/utils/pushNotifications';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
@@ -75,6 +76,11 @@ const AdminProvidersScreen = observer(() => {
             try {
               setProcessingAction({ userId, action: 'approve' });
               
+              // Get user data for notification
+              const userDoc = await getDoc(doc(db, 'users', userId));
+              const userData = userDoc.exists() ? userDoc.data() : {};
+              const providerName = userData.displayName || userData.name || 'Provider';
+              
               // Update provider status
               await updateDoc(doc(db, 'providers', userId), {
                 approvalStatus: 'approved',
@@ -86,6 +92,10 @@ const AdminProvidersScreen = observer(() => {
                 role: 'provider',
                 updatedAt: serverTimestamp(),
               });
+              
+              // Send push notification to provider
+              // Using a generic service ID since this is provider application approval, not a specific service
+              await notifyServiceApproved(userId, 'provider-application', providerName);
               
               showSuccessMessage('Provider Approved', 'They will see Provider App on next login');
               refetch();
@@ -118,10 +128,19 @@ const AdminProvidersScreen = observer(() => {
             try {
               setProcessingAction({ userId, action: 'reject' });
               
+              // Get user data for notification
+              const userDoc = await getDoc(doc(db, 'users', userId));
+              const userData = userDoc.exists() ? userDoc.data() : {};
+              const providerName = userData.displayName || userData.name || 'Provider';
+              
               await updateDoc(doc(db, 'providers', userId), {
                 approvalStatus: 'rejected',
                 rejectedAt: serverTimestamp(),
               });
+              
+              // Send push notification to provider
+              // Using a generic service ID since this is provider application rejection, not a specific service
+              await notifyServiceRejected(userId, 'provider-application', providerName);
               
               showSuccessMessage('Application Rejected', 'Provider application has been rejected');
               refetch();

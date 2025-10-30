@@ -43,11 +43,24 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bb51b59e-8081-4d34-a772-0941054818a5"
+      }
+    },
+    "owner": "brilworks"
   }
 }

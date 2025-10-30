@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
-const ChatScreen = observer(() => {
+const ProviderChatScreen = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -24,7 +24,7 @@ const ChatScreen = observer(() => {
     isRefetching,
   } = useConversations(user?.uid || null);
 
-  // Realtime: listen for conversation changes and refresh the list
+  // Realtime refresh for provider chat list (iOS fix as well)
   useConversationsListRealtime(user?.uid || null);
 
   // Get total unread count
@@ -67,18 +67,6 @@ const ChatScreen = observer(() => {
               </Text>
             )}
           </View>
-
-          {/* New Chat Button (optional) */}
-          <Pressable
-            onPress={() => {
-              // Future: Open contact list to start new chat
-              console.log('Start new chat');
-            }}
-            className="w-10 h-10 rounded-full items-center justify-center active:opacity-70"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.text} />
-          </Pressable>
         </View>
       </View>
 
@@ -97,7 +85,7 @@ const ChatScreen = observer(() => {
             No messages yet
           </Text>
           <Text className="text-sm mt-2 text-center" style={{ color: colors.textSecondary }}>
-            Start a conversation with your service professional after booking a service
+            Start chatting with customers after they book your services
           </Text>
         </View>
       ) : (
@@ -130,4 +118,5 @@ const ChatScreen = observer(() => {
   );
 });
 
-export default ChatScreen;
+export default ProviderChatScreen;
+

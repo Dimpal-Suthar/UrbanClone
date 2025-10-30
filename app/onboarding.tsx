@@ -51,11 +51,11 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-      console.log('✅ Onboarding complete, going to phone auth');
-      router.replace('/auth/phone'); // Go to phone auth
+      console.log('✅ Onboarding complete, going to email auth');
+      router.replace('/auth/email');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      router.replace('/auth/phone');
+      router.replace('/auth/email');
     }
   };
 

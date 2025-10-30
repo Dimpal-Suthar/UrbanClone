@@ -1,16 +1,12 @@
 import { auth, db } from '@/config/firebase';
 import {
-  ApplicationVerifier,
   createUserWithEmailAndPassword,
-  PhoneAuthProvider,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signInWithCredential,
   signInWithEmailAndPassword,
   updateProfile as updateFirebaseProfile
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { parsePhoneNumber } from 'libphonenumber-js';
 
 export type UserRole = 'customer' | 'provider' | 'admin';
 
@@ -135,72 +131,6 @@ class AuthService {
     }
   }
 
-  // ========== PHONE AUTHENTICATION ==========
-  
-  /**
-   * Send OTP to phone number
-   */
-  async sendOTP(
-    phoneNumber: string, 
-    recaptchaVerifier: ApplicationVerifier
-  ): Promise<string> {
-    try {
-      // Format phone number to E.164 format
-      const formattedPhone = this.formatPhoneNumber(phoneNumber);
-      
-      // Create phone auth provider
-      const phoneProvider = new PhoneAuthProvider(auth);
-      
-      // Send verification code
-      const verificationId = await phoneProvider.verifyPhoneNumber(
-        formattedPhone,
-        recaptchaVerifier
-      );
-      
-      return verificationId;
-    } catch (error: any) {
-      console.error('SendOTP error:', error.code, error.message);
-      throw this.handleAuthError(error);
-    }
-  }
-
-  /**
-   * Verify OTP code
-   */
-  async verifyOTP(verificationId: string, code: string): Promise<UserProfile> {
-    try {
-      // Create credential
-      const credential = PhoneAuthProvider.credential(verificationId, code);
-      
-      // Sign in with credential
-      const userCredential = await signInWithCredential(auth, credential);
-      const user = userCredential.user;
-      
-      // Check if user exists in Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (userDoc.exists()) {
-        return userDoc.data() as UserProfile;
-      } else {
-        // Create new user profile
-        const newUser: UserProfile = {
-          uid: user.uid,
-          role: 'customer',  // Default role
-          phoneNumber: user.phoneNumber || '',
-          authMethod: 'phone',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        
-        await setDoc(doc(db, 'users', user.uid), newUser);
-        return newUser;
-      }
-    } catch (error: any) {
-      console.error('VerifyOTP error:', error.code, error.message);
-      throw this.handleAuthError(error);
-    }
-  }
-
   // ========== COMMON METHODS ==========
 
   /**
@@ -248,6 +178,22 @@ class AuthService {
    */
   async signOut(): Promise<void> {
     try {
+      // Remove device token before signing out
+      if (auth.currentUser?.uid) {
+        const { removeFCMToken } = await import('@/services/fcmService');
+        const { getExpoPushToken } = await import('@/services/fcmService');
+        
+        try {
+          const currentToken = await getExpoPushToken();
+          if (currentToken) {
+            await removeFCMToken(auth.currentUser.uid, currentToken);
+            console.log('✅ Device token removed on logout');
+          }
+        } catch (tokenError) {
+          console.warn('Could not remove device token:', tokenError);
+        }
+      }
+      
       await auth.signOut();
     } catch (error: any) {
       console.error('SignOut error:', error.message);
@@ -255,20 +201,6 @@ class AuthService {
     }
   }
 
-  /**
-   * Format phone number to E.164 format
-   */
-  private formatPhoneNumber(phoneNumber: string, countryCode: string = 'IN'): string {
-    try {
-      const parsed = parsePhoneNumber(phoneNumber, countryCode as any);
-      if (parsed && parsed.isValid()) {
-        return parsed.number;
-      }
-      throw new Error('Invalid phone number');
-    } catch (error) {
-      throw new Error('Invalid phone number format');
-    }
-  }
 
   /**
    * Handle Firebase auth errors
@@ -282,11 +214,6 @@ class AuthService {
       'auth/wrong-password': 'Incorrect password',
       'auth/weak-password': 'Password should be at least 6 characters',
       'auth/too-many-requests': 'Too many attempts. Please try again later',
-      
-      // Phone errors
-      'auth/invalid-phone-number': 'Invalid phone number',
-      'auth/invalid-verification-code': 'Invalid OTP code',
-      'auth/code-expired': 'OTP code has expired',
       
       // Common errors
       'auth/network-request-failed': 'Network error. Please check your connection',

@@ -23,6 +23,7 @@ export interface User {
   city?: string;
   state?: string;
   pincode?: string;
+  deviceTokens?: string[]; // Array of FCM tokens for push notifications
   createdAt?: any;
   updatedAt?: any;
 }

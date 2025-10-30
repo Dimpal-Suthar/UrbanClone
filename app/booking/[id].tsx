@@ -13,8 +13,11 @@ import {
   useRejectBooking,
   useStartService,
 } from '@/hooks/useBookings';
+import { useGetOrCreateConversation } from '@/hooks/useConversations';
 import { useCreateReview } from '@/hooks/useReviews';
+import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
 import { BookingStatus } from '@/types';
+import { makeCall } from '@/utils/callHelpers';
 import { showFailedMessage, showSuccessMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,7 +25,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -52,6 +54,29 @@ export default function BookingDetailScreen() {
   const startServiceMutation = useStartService();
   const completeBookingMutation = useCompleteBooking();
   const createReviewMutation = useCreateReview();
+  const createConversationMutation = useGetOrCreateConversation();
+  
+  // ROOT FIX: Fetch fresh user data from users collection (cached by TanStack Query)
+  // This shows current user data, not stale booking data
+  const { data: customerProfile } = useUserProfile(booking?.customerId || null);
+  const { data: providerProfile } = useUserProfile(booking?.providerId || null);
+  
+  // Real-time updates when user profiles change
+  useUserProfileRealtime(booking?.customerId || null);
+  useUserProfileRealtime(booking?.providerId || null);
+  
+  // Use fresh data with fallback to booking data
+  const customer = {
+    name: customerProfile?.displayName || booking?.customerName || 'Customer',
+    phone: customerProfile?.phone || booking?.customerPhone || '',
+    photo: customerProfile?.photoURL || booking?.customerPhoto || null,
+  };
+  
+  const provider = {
+    name: providerProfile?.displayName || booking?.providerName || 'Provider',
+    phone: providerProfile?.phone || booking?.providerPhone || '',
+    photo: providerProfile?.photoURL || booking?.providerPhoto || null,
+  };
 
   const handleCancelBooking = async () => {
     if (!cancelReason.trim()) {
@@ -63,6 +88,7 @@ export default function BookingDetailScreen() {
       await cancelBookingMutation.mutateAsync({
         bookingId: id as string,
         reason: cancelReason,
+        cancelledByUserId: user?.uid,
       });
       setShowCancelModal(false);
       showSuccessMessage('Success', 'Booking cancelled successfully');
@@ -154,12 +180,44 @@ export default function BookingDetailScreen() {
     }
   };
 
-  const handleCall = (phone: string) => {
+  const handleMessageProvider = async () => {
+    if (!booking || !user) return;
+
+    try {
+      const conversation = await createConversationMutation.mutateAsync({
+        customerId: booking.customerId,
+        providerId: booking.providerId,
+        customerName: customer.name,
+        customerPhoto: customer.photo,
+        providerName: provider.name,
+        providerPhoto: provider.photo,
+        bookingId: booking.id,
+      });
+
+      router.push(`/chat/${conversation.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      showFailedMessage('Error', 'Failed to open chat. Please try again.');
+    }
+  };
+
+  const handleCall = async (phone: string) => {
     if (!phone || phone.trim() === '') {
       showWarningMessage('No Phone Number', 'Phone number not available for this user');
       return;
     }
-    Linking.openURL(`tel:${phone}`);
+    
+    try {
+      await makeCall(phone);
+    } catch (error) {
+      console.error('Error making call:', error);
+      showFailedMessage('Error', 'Failed to make call. Please try again.');
+    }
+  };
+  
+  // Get phone number based on user role
+  const getOppositeUserPhone = () => {
+    return isCustomer ? provider.phone : customer.phone;
   };
 
   const getStatusColor = (status: BookingStatus) => {
@@ -376,9 +434,9 @@ export default function BookingDetailScreen() {
               {isCustomer ? 'Professional' : 'Customer'}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {(isCustomer ? booking.providerPhoto : booking.customerPhoto) ? (
+              {(isCustomer ? provider.photo : customer.photo) ? (
                 <Image
-                  source={{ uri: isCustomer ? booking.providerPhoto : booking.customerPhoto }}
+                  source={{ uri: isCustomer ? provider.photo : customer.photo }}
                   style={{ width: 56, height: 56, borderRadius: 28, marginRight: 16 }}
                 />
               ) : (
@@ -394,32 +452,35 @@ export default function BookingDetailScreen() {
                   }}
                 >
                   <Text style={{ color: 'white', fontWeight: '700', fontSize: 18 }}>
-                    {getInitials(isCustomer ? booking.providerName : booking.customerName)}
+                    {getInitials(isCustomer ? provider.name : customer.name)}
                   </Text>
                 </View>
               )}
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 4 }}>
-                  {isCustomer ? booking.providerName : booking.customerName}
+                  {isCustomer ? provider.name : customer.name}
                 </Text>
                 <Text style={{ fontSize: 14, color: colors.textSecondary }}>
-                  {isCustomer ? booking.providerPhone : booking.customerPhone}
+                  {isCustomer ? provider.phone : customer.phone}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => handleCall(isCustomer ? booking.providerPhone : booking.customerPhone)}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: colors.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                className="active:opacity-70"
-              >
-                <Ionicons name="call" size={20} color="white" />
-              </Pressable>
+              {/* Call Button - Only show if phone number exists */}
+              {getOppositeUserPhone() && (
+                <Pressable
+                  onPress={() => handleCall(getOppositeUserPhone())}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  className="active:opacity-70"
+                >
+                  <Ionicons name="call" size={20} color="white" />
+                </Pressable>
+              )}
             </View>
           </Card>
 
@@ -492,6 +553,17 @@ export default function BookingDetailScreen() {
           {/* Customer Actions */}
           {isCustomer && (
             <View style={{ gap: 12 }}>
+              {/* Message Provider Button - Available after booking is accepted */}
+              {booking.status !== 'pending' && (
+                <Button
+                  title="Message Provider"
+                  variant="outline"
+                  onPress={handleMessageProvider}
+                  icon="chatbubble-outline"
+                  loading={createConversationMutation.isPending}
+                />
+              )}
+              
               {(booking.status === 'pending' || booking.status === 'accepted') && (
                 <Button
                   title="Cancel Booking"
@@ -513,6 +585,17 @@ export default function BookingDetailScreen() {
           {/* Provider Actions */}
           {isProvider && booking.status !== 'completed' && (
             <View style={{ gap: 12 }}>
+              {/* Message Customer Button - Available after booking is accepted */}
+              {booking.status !== 'pending' && (
+                <Button
+                  title="Message Customer"
+                  variant="outline"
+                  onPress={handleMessageProvider}
+                  icon="chatbubble-outline"
+                  loading={createConversationMutation.isPending}
+                />
+              )}
+
               {booking.status === 'pending' && (
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   <View style={{ flex: 1 }}>

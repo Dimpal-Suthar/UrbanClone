@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { BookingListCard } from '@/components/BookingListCard';
 
 type BookingTab = 'new' | 'upcoming' | 'completed' | 'cancelled';
 
@@ -212,108 +213,9 @@ const ProviderBookingsScreen = observer(() => {
               </Text>
             </Card>
           ) : (
-            filteredBookings.map((booking) => {
-              const dateObj = new Date(booking.scheduledDate);
-              const formattedDate = dateObj.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              });
-
-              return (
-                <Pressable
-                  key={booking.id}
-                  onPress={() => router.push(`/booking/${booking.id}`)}
-                  className="active:opacity-70"
-                >
-                  <Card variant="elevated" className="mb-4">
-                    <View className="flex-row justify-between items-start mb-3">
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
-                          {booking.serviceName}
-                        </Text>
-                        <View className="flex-row items-center mt-2">
-                          {booking.customerPhoto ? (
-                            <Image
-                              source={{ uri: booking.customerPhoto }}
-                              style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
-                            />
-                          ) : (
-                            <View
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12,
-                                backgroundColor: colors.primary,
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginRight: 8,
-                              }}
-                            >
-                              <Text style={{ color: 'white', fontSize: 10, fontWeight: '600' }}>
-                                {getInitials(booking.customerName)}
-                              </Text>
-                            </View>
-                          )}
-                          <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                            {booking.customerName}
-                          </Text>
-                        </View>
-                      </View>
-                      <View
-                        className="px-3 py-1 rounded-full"
-                        style={{
-                          backgroundColor: `${getStatusColor(booking.status)}20`,
-                        }}
-                      >
-                        <Text
-                          className="text-xs font-medium"
-                          style={{
-                            color: getStatusColor(booking.status),
-                          }}
-                        >
-                          {getStatusText(booking.status)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View className="flex-row items-center mb-3">
-                      <View className="flex-row items-center flex-1">
-                        <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                        <Text className="text-sm ml-2" style={{ color: colors.text }}>
-                          {formattedDate}
-                        </Text>
-                      </View>
-                      <View className="flex-row items-center flex-1">
-                        <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                        <Text className="text-sm ml-2" style={{ color: colors.text }}>
-                          {booking.scheduledTime}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View className="flex-row items-center mb-3">
-                      <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                      <Text className="text-sm ml-2 flex-1" style={{ color: colors.textSecondary }} numberOfLines={1}>
-                        {booking.address.city}, {booking.address.state}
-                      </Text>
-                    </View>
-
-                    <View className="flex-row justify-between items-center pt-3" style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
-                      <Text className="text-lg font-bold" style={{ color: colors.primary }}>
-                        ₹{booking.price}
-                      </Text>
-                      <View className="flex-row items-center">
-                        <Text className="text-sm font-medium mr-2" style={{ color: colors.primary }}>
-                          {activeTab === 'new' ? 'View Request' : 'View Details'}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-                      </View>
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })
+            filteredBookings.map((booking) => (
+              <BookingListCard key={booking.id} booking={booking} showProvider={false} />
+            ))
           )}
 
           <View className="h-6" />

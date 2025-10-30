@@ -38,7 +38,7 @@ export default function ConfirmBookingScreen() {
 
   const router = useRouter();
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: service } = useService(serviceId as string);
@@ -94,10 +94,14 @@ export default function ConfirmBookingScreen() {
         notes: (notes as string) || undefined,
       };
 
+      // Fetch customer's phone number from their Firestore profile
+      const customerDoc = await getDoc(doc(db, 'users', user.uid));
+      const customerProfile = customerDoc.exists() ? customerDoc.data() : {};
+      
       const customerData = {
-        name: user.displayName || user.email?.split('@')[0] || 'Customer',
-        phone: user.phoneNumber || '',
-        photo: user.photoURL || undefined,
+        name: userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Customer',
+        phone: customerProfile.phone || user.phoneNumber || '',
+        photo: userProfile?.photoURL || user.photoURL || undefined,
       };
 
       const provider = {
