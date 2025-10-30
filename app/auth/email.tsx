@@ -80,9 +80,6 @@ const EmailAuthScreen = observer(() => {
     <Container>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <View className="flex-1 px-6 pt-16 pb-8">
-          <Pressable onPress={() => router.back()} className="mb-8">
-            <Ionicons name="arrow-back" size={28} color={colors.text} />
-          </Pressable>
 
           <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
             {isSignUp ? 'Create Account' : 'Welcome Back'}

@@ -28,7 +28,7 @@ const AdminSettings = observer(() => {
           try {
             setLoggingOut(true);
             await signOut();
-            router.replace('/auth/select');
+            router.replace('/auth/email');
           } catch (error) {
             console.error('Logout error:', error);
             showFailedMessage('Logout Failed', 'Failed to logout. Please try again.');

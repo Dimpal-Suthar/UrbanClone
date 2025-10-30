@@ -37,7 +37,7 @@ const ProviderProfileScreen = observer(() => {
           try {
             setLoggingOut(true);
             await signOut();
-            router.replace('/auth/select');
+            router.replace('/auth/email');
           } catch (error) {
             console.error('Logout error:', error);
           } finally {
