@@ -45,6 +45,23 @@ async function sendExpoPush(tokens: string[], title: string, body: string, data:
   }
 }
 
+async function getAdminUserIds(): Promise<string[]> {
+  const snap = await db.collection('users').where('role', '==', 'admin').get();
+  return snap.docs.map((d) => d.id);
+}
+
+async function getAdminFcmTokens(): Promise<string[]> {
+  const admins = await getAdminUserIds();
+  const tokenArrays = await Promise.all(admins.map(getUserFcmTokens));
+  return tokenArrays.flat();
+}
+
+async function getAdminExpoTokens(): Promise<string[]> {
+  const admins = await getAdminUserIds();
+  const tokenArrays = await Promise.all(admins.map(getUserExpoTokens));
+  return tokenArrays.flat();
+}
+
 export const onMessageCreated = onDocumentCreated('conversations/{conversationId}/messages/{messageId}', async (event) => {
   const message = event.data?.data() as any;
   const conversationId = event.params.conversationId as string;
@@ -133,9 +150,11 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   const bookingId = event.params.bookingId as string;
 
   try {
-    const [fcmTokens, expoTokens] = await Promise.all([
+    const [fcmTokens, expoTokens, adminFcm, adminExpo] = await Promise.all([
       getUserFcmTokens(providerId),
       getUserExpoTokens(providerId),
+      getAdminFcmTokens(),
+      getAdminExpoTokens(),
     ]);
 
     if (fcmTokens.length > 0) {
@@ -148,8 +167,181 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
     if (expoTokens.length > 0) {
       await sendExpoPush(expoTokens, title, body, { type: 'booking', bookingId, status: String(booking.status || 'pending') });
     }
+
+    // Notify admins as well about new booking
+    const adminTitle = 'New Booking Created';
+    const adminBody = `${booking.customerName || 'Customer'} booked ${booking.serviceName || 'a service'} for provider ${booking.providerName || ''}`;
+    if (adminFcm.length > 0) {
+      await messaging.sendEachForMulticast({
+        tokens: adminFcm,
+        notification: { title: adminTitle, body: adminBody },
+        data: { type: 'booking', bookingId, status: String(booking.status || 'pending') },
+      });
+    }
+    if (adminExpo.length > 0) {
+      await sendExpoPush(adminExpo, adminTitle, adminBody, { type: 'booking', bookingId, status: String(booking.status || 'pending') });
+    }
   } catch (e) {
     logger.error('onBookingCreated error', e);
+  }
+});
+
+// Notify admins when a provider application is submitted
+export const onProviderApplicationCreated = onDocumentCreated('providers/{providerId}', async (event) => {
+  const provider = event.data?.data() as any;
+  if (!provider) return;
+
+  const providerId = event.params.providerId as string;
+  const title = 'New Provider Application';
+  const body = `${provider.name || 'User'} applied to become a provider`;
+
+  try {
+    // Get all admin users
+    const adminIds = await getAdminUserIds();
+    
+    // Filter out the provider themselves from notifications
+    const filteredAdminIds = adminIds.filter(id => id !== providerId);
+    
+    if (filteredAdminIds.length === 0) {
+      logger.warn('No admins to notify (excluding the provider themselves)');
+      return;
+    }
+    
+    logger.info('Filtered admin IDs (excluding provider)', { filteredAdminIds, excludedProviderId: providerId });
+    
+    // Get tokens only for actual admins (excluding provider)
+    const [adminFcm, adminExpo] = await Promise.all([
+      Promise.all(filteredAdminIds.map(getUserFcmTokens)).then((x) => x.flat()),
+      Promise.all(filteredAdminIds.map(getUserExpoTokens)).then((x) => x.flat()),
+    ]);
+    
+    if (adminFcm.length > 0) {
+      await messaging.sendEachForMulticast({
+        tokens: adminFcm,
+        notification: { title, body },
+        data: { type: 'provider_application', providerId },
+      });
+    }
+    if (adminExpo.length > 0) {
+      await sendExpoPush(adminExpo, title, body, { type: 'provider_application', providerId });
+    }
+  } catch (e) {
+    logger.error('onProviderApplicationCreated error', e);
+  }
+});
+
+// Notify provider on approval/rejection of application
+export const onProviderApplicationUpdated = onDocumentUpdated('providers/{providerId}', async (event) => {
+  const before = event.data?.before.data() as any;
+  const after = event.data?.after.data() as any;
+  
+  logger.info('onProviderApplicationUpdated triggered', {
+    providerId: event.params.providerId,
+    before: before,
+    after: after,
+  });
+  
+  if (!before || !after) {
+    logger.warn('Missing before or after data');
+    return;
+  }
+  
+  // Check for approvalStatus field (used in the app)
+  const beforeStatus = before.approvalStatus || before.status;
+  const afterStatus = after.approvalStatus || after.status;
+  
+  logger.info('Status comparison', { beforeStatus, afterStatus });
+  
+  if (beforeStatus === afterStatus) {
+    logger.info('Status unchanged, skipping notification');
+    return;
+  }
+
+  const status = String(afterStatus || '');
+  if (!['approved', 'rejected'].includes(status)) {
+    logger.info('Status not approved or rejected, skipping', { status });
+    return;
+  }
+
+  const providerId = event.params.providerId as string;
+  
+  let title = '';
+  let body = '';
+  
+  if (status === 'approved') {
+    title = 'Provider Application Approved! 🎉';
+    body = 'Congratulations! Your provider application has been approved. You can now access provider features and start accepting bookings.';
+  } else {
+    title = 'Provider Application Update';
+    body = 'Unfortunately, your provider application was not approved at this time. Please review your application details and reapply, or contact support for assistance.';
+  }
+
+  logger.info('Sending notification', { providerId, status, title });
+
+  try {
+    const [fcm, expo] = await Promise.all([getUserFcmTokens(providerId), getUserExpoTokens(providerId)]);
+    
+    logger.info('Got tokens', { fcmCount: fcm.length, expoCount: expo.length });
+    
+    if (fcm.length > 0) {
+      await messaging.sendEachForMulticast({
+        tokens: fcm,
+        notification: { title, body },
+        data: { type: 'provider_application_status', status },
+      });
+      logger.info('FCM notification sent');
+    }
+    if (expo.length > 0) {
+      await sendExpoPush(expo, title, body, { type: 'provider_application_status', status });
+      logger.info('Expo notification sent');
+    }
+  } catch (e) {
+    logger.error('onProviderApplicationUpdated error', e);
+  }
+});
+
+// Notify admins when a provider creates a new service (pending approval)
+export const onProviderServiceCreated = onDocumentCreated('providerServices/{serviceId}', async (event) => {
+  const svc = event.data?.data() as any;
+  if (!svc) return;
+  const title = 'New Provider Service';
+  const body = `${svc.providerName || 'Provider'} created service ${svc.name || ''}`;
+  try {
+    const [adminFcm, adminExpo] = await Promise.all([getAdminFcmTokens(), getAdminExpoTokens()]);
+    if (adminFcm.length > 0) {
+      await messaging.sendEachForMulticast({ tokens: adminFcm, notification: { title, body }, data: { type: 'provider_service', serviceId: event.params.serviceId as string } });
+    }
+    if (adminExpo.length > 0) {
+      await sendExpoPush(adminExpo, title, body, { type: 'provider_service', serviceId: event.params.serviceId as string });
+    }
+  } catch (e) {
+    logger.error('onProviderServiceCreated error', e);
+  }
+});
+
+// Notify provider on service approval/rejection
+export const onProviderServiceUpdated = onDocumentUpdated('providerServices/{serviceId}', async (event) => {
+  const before = event.data?.before.data() as any;
+  const after = event.data?.after.data() as any;
+  if (!before || !after) return;
+  if (before.status === after.status) return;
+  const status = String(after.status || '');
+  if (!['approved', 'rejected'].includes(status)) return;
+
+  const providerId = String(after.providerId || '');
+  if (!providerId) return;
+  const title = status === 'approved' ? 'Service Approved' : 'Service Rejected';
+  const body = status === 'approved' ? `Your service "${after.name || ''}" is approved` : `Your service "${after.name || ''}" was rejected`;
+  try {
+    const [fcm, expo] = await Promise.all([getUserFcmTokens(providerId), getUserExpoTokens(providerId)]);
+    if (fcm.length > 0) {
+      await messaging.sendEachForMulticast({ tokens: fcm, notification: { title, body }, data: { type: 'provider_service_status', status } });
+    }
+    if (expo.length > 0) {
+      await sendExpoPush(expo, title, body, { type: 'provider_service_status', status });
+    }
+  } catch (e) {
+    logger.error('onProviderServiceUpdated error', e);
   }
 });
 

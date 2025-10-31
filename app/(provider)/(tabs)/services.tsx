@@ -15,7 +15,7 @@ import { getStoragePath } from '@/services/storageService';
 import { ProviderServiceOffering, ServiceCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
@@ -32,16 +32,37 @@ const ProviderServicesScreen = observer(() => {
   const [editingOffering, setEditingOffering] = useState<ProviderServiceOffering | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Fetch provider data
-  const { data: providerData, isLoading: loadingProvider } = useQuery({
-    queryKey: ['provider-data', user?.uid],
-    queryFn: async () => {
-      if (!user?.uid) return null;
-      const providerDoc = await getDoc(doc(db, 'providers', user.uid));
-      return providerDoc.exists() ? providerDoc.data() : null;
-    },
-    enabled: !!user?.uid,
-  });
+  // Fetch provider data with real-time updates
+  const [providerData, setProviderData] = useState<any>(null);
+  const [loadingProvider, setLoadingProvider] = useState(true);
+
+  React.useEffect(() => {
+    if (!user?.uid) {
+      setLoadingProvider(false);
+      return;
+    }
+
+    setLoadingProvider(true);
+    
+    // Set up real-time listener for provider data
+    const unsubscribe = onSnapshot(
+      doc(db, 'providers', user.uid),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setProviderData(snapshot.data());
+        } else {
+          setProviderData(null);
+        }
+        setLoadingProvider(false);
+      },
+      (error) => {
+        console.error('Error listening to provider data:', error);
+        setLoadingProvider(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   // Fetch provider's service offerings
   const { data: providerOfferings = [], isLoading: loadingOfferings } = useProviderServiceOfferings();

@@ -1,7 +1,8 @@
-import { auth } from '@/config/firebase';
+import { auth, db } from '@/config/firebase';
 import authService, { UserProfile } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 export class AuthStore {
@@ -13,6 +14,9 @@ export class AuthStore {
   
   // Onboarding state
   hasSeenOnboarding = false;
+
+  // Profile listener
+  private profileUnsubscribe: Unsubscribe | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -39,19 +43,50 @@ export class AuthStore {
       });
 
       if (firebaseUser) {
-        try {
-          await this.loadUserProfile(firebaseUser.uid);
-        } catch (error) {
-          console.error('Load profile error:', error);
-          // Keep existing userProfile if loading fails
-        }
+        // Set up real-time profile listener
+        this.setupProfileListener(firebaseUser.uid);
       } else {
-        // Only clear userProfile when user actually logs out
+        // Clean up listener and clear profile
+        if (this.profileUnsubscribe) {
+          this.profileUnsubscribe();
+          this.profileUnsubscribe = null;
+        }
         runInAction(() => {
           this.userProfile = null;
         });
       }
     });
+  }
+
+  /**
+   * Setup real-time listener for user profile changes
+   */
+  private setupProfileListener(uid: string) {
+    // Clean up existing listener
+    if (this.profileUnsubscribe) {
+      this.profileUnsubscribe();
+    }
+
+    console.log('👂 Setting up real-time profile listener for UID:', uid);
+    
+    this.profileUnsubscribe = onSnapshot(
+      doc(db, 'users', uid),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const profile = snapshot.data() as UserProfile;
+          console.log('🔄 Profile updated in real-time. Role:', profile.role);
+          
+          runInAction(() => {
+            this.userProfile = profile;
+          });
+        } else {
+          console.warn('⚠️ User profile document does not exist');
+        }
+      },
+      (error) => {
+        console.error('❌ Profile listener error:', error);
+      }
+    );
   }
 
   /**

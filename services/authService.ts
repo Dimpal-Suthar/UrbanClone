@@ -1,7 +1,6 @@
 import { auth, db } from '@/config/firebase';
 import {
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   updateProfile as updateFirebaseProfile
@@ -47,8 +46,7 @@ class AuthService {
         await updateFirebaseProfile(user, { displayName });
       }
       
-      // Send email verification
-      await sendEmailVerification(user);
+      // Skipping email verification per product decision
       
       // Create user profile in Firestore
       const newUser: UserProfile = {
@@ -64,14 +62,17 @@ class AuthService {
       
       await setDoc(doc(db, 'users', user.uid), newUser);
       
-      // If wants to become provider, create provider application
+      // If wants to become provider, create a provider application document
+      // This will trigger the Cloud Function to notify admins
       if (wantsToBecomeProvider) {
         await setDoc(doc(db, 'providers', user.uid), {
           userId: user.uid,
-          approvalStatus: 'pending',
-          services: [],  // Will add later
-          experience: 0,
+          name: displayName || '',
+          email: user.email || '',
+          services: [], // Empty until they complete the full application
+          experience: null,
           bio: '',
+          approvalStatus: 'pending',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });

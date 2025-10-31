@@ -6,9 +6,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 const AVAILABLE_SERVICES = [
   { id: 'cleaning', name: 'Home Cleaning', icon: 'sparkles' },
@@ -19,7 +19,7 @@ const AVAILABLE_SERVICES = [
   { id: 'pest-control', name: 'Pest Control', icon: 'bug' },
 ];
 
-export default function ProviderApplicationScreen() {
+export default function EditProviderDetailsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -28,6 +28,32 @@ export default function ProviderApplicationScreen() {
   const [experience, setExperience] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    loadProviderData();
+  }, [user?.uid]);
+
+  const loadProviderData = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      setFetching(true);
+      const providerDoc = await getDoc(doc(db, 'providers', user.uid));
+      
+      if (providerDoc.exists()) {
+        const data = providerDoc.data();
+        setSelectedServices(data.services || []);
+        setExperience(data.experience ? String(data.experience) : '');
+        setBio(data.bio || '');
+      }
+    } catch (error) {
+      console.error('Error loading provider data:', error);
+      Alert.alert('Error', 'Failed to load provider details');
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const toggleService = (serviceId: string) => {
     if (selectedServices.includes(serviceId)) {
@@ -43,8 +69,8 @@ export default function ProviderApplicationScreen() {
       return;
     }
 
-    if (!experience || !bio) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!bio.trim()) {
+      Alert.alert('Error', 'Please add your bio');
       return;
     }
 
@@ -54,38 +80,47 @@ export default function ProviderApplicationScreen() {
       const experienceNumber = parseInt(experience, 10);
       const experienceValue = !isNaN(experienceNumber) && experienceNumber > 0 ? experienceNumber : null;
 
-      await setDoc(doc(db, 'providers', user!.uid), {
-        userId: user!.uid,
+      await updateDoc(doc(db, 'providers', user!.uid), {
         services: selectedServices,
         experience: experienceValue,
-        bio,
-        approvalStatus: 'pending',
-        createdAt: serverTimestamp(),
+        bio: bio.trim(),
         updatedAt: serverTimestamp(),
       });
       
       Alert.alert(
-        'Application Submitted!',
-        'Your provider application has been submitted successfully. Admin will review it within 24-48 hours.\n\nUntil approval, you can continue using the app as a customer.',
+        'Profile Updated!',
+        'Your provider details have been updated successfully.',
         [{ 
           text: 'OK', 
           onPress: () => {
-            // Try to go back, if can't (no history), go to customer home
             if (router.canGoBack()) {
               router.back();
             } else {
-              router.replace('/(tabs)');
+              router.replace('/(provider)/(tabs)/profile');
             }
           }
         }]
       );
     } catch (error: any) {
-      console.error('Application error:', error);
-      Alert.alert('Error', 'Failed to submit application. Please try again.');
+      console.error('Update error:', error);
+      Alert.alert('Error', 'Failed to update details. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <Container>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="mt-4" style={{ color: colors.textSecondary }}>
+            Loading provider details...
+          </Text>
+        </View>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -96,10 +131,10 @@ export default function ProviderApplicationScreen() {
           </Pressable>
 
           <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
-            Become a Service Provider
+            Edit Provider Details
           </Text>
           <Text className="text-base mb-8" style={{ color: colors.textSecondary }}>
-            Start earning by offering your services
+            Update your services, experience, and bio
           </Text>
 
           {/* Select Services */}
@@ -177,7 +212,7 @@ export default function ProviderApplicationScreen() {
 
           {/* Submit Button */}
           <Button
-            title="Submit Application"
+            title="Update Details"
             onPress={handleSubmit}
             disabled={loading}
             loading={loading}

@@ -14,10 +14,11 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 
 const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
-  { id: '2', icon: 'document-text-outline', label: 'My Documents', screen: 'documents' },
-  { id: '3', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
-  { id: '4', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '5', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '2', icon: 'briefcase-outline', label: 'Provider Details', screen: '/provider/edit-details' },
+  { id: '3', icon: 'document-text-outline', label: 'My Documents', screen: 'documents' },
+  { id: '4', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
+  { id: '5', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
+  { id: '6', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
 ];
 
 const ProviderProfileScreen = observer(() => {
@@ -49,7 +50,7 @@ const ProviderProfileScreen = observer(() => {
   };
 
   const handleMenuPress = (screen: string) => {
-    if (screen === '/profile/edit') {
+    if (screen === '/profile/edit' || screen === '/provider/edit-details') {
       router.push(screen);
       return;
     }

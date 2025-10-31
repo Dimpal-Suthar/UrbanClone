@@ -5,6 +5,7 @@ import { Text, TextInput, TextInputProps, View } from 'react-native';
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 }
@@ -12,6 +13,7 @@ interface InputProps extends TextInputProps {
 export function Input({ 
   label, 
   error, 
+  helperText,
   leftIcon, 
   rightIcon,
   style,
@@ -55,8 +57,13 @@ export function Input({
         />
         {rightIcon && <View style={{ marginLeft: 12 }}>{rightIcon}</View>}
       </View>
+      {helperText && !error && (
+        <Text style={{ marginTop: 4, fontSize: 12, color: colors.textSecondary }}>
+          {helperText}
+        </Text>
+      )}
       {error && (
-        <Text style={{ marginTop: 4, fontSize: 14, color: colors.error }}>
+        <Text style={{ marginTop: 4, fontSize: 12, color: colors.error }}>
           {error}
         </Text>
       )}

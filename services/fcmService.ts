@@ -158,8 +158,15 @@ export const saveFCMToken = async (
         console.log('✅ Token already exists, skipping');
       }
     } else {
-      console.error('❌ User document does not exist');
-      throw new Error('User document does not exist');
+      // Create minimal user document with token if missing (signup race-safe)
+      console.log('ℹ️ User document missing; creating with token');
+      await setDoc(userRef, {
+        uid: userId,
+        deviceTokens: [token],
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+      console.log('✅ Created user doc and saved token');
     }
   } catch (error) {
     console.error('❌ Error saving FCM token:', error);
@@ -182,8 +189,12 @@ export const saveNativePushToken = async (
     const userRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userRef);
 
+    // Create document if missing to avoid race during signup
     if (!docSnap.exists()) {
-      throw new Error('User document does not exist');
+      await setDoc(userRef, {
+        uid: userId,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
     }
 
     const update: any = { updatedAt: serverTimestamp() };

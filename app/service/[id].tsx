@@ -587,27 +587,48 @@ export default function ServiceDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Action */}
-      <View style={{ 
-        paddingHorizontal: 24, 
-        paddingVertical: 16, 
-        borderTopWidth: 1, 
-        borderTopColor: colors.border,
-        backgroundColor: colors.surface,
-      }}>
-        <Button
-          title="Book Now"
-          onPress={() => {
-            router.push({
-              pathname: '/booking/schedule',
-              params: { 
-                serviceId: id as string,
-              },
-            });
-          }}
-          icon="calendar"
-        />
-      </View>
+      {/* Bottom Action - Only show if providers available */}
+      {providers.length > 0 ? (
+        <View style={{ 
+          paddingHorizontal: 24, 
+          paddingVertical: 16, 
+          borderTopWidth: 1, 
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+        }}>
+          <Button
+            title="Book Now"
+            onPress={() => {
+              router.push({
+                pathname: '/booking/schedule',
+                params: { 
+                  serviceId: id as string,
+                },
+              });
+            }}
+            icon="calendar"
+          />
+        </View>
+      ) : (
+        <View style={{ 
+          paddingHorizontal: 24, 
+          paddingVertical: 16, 
+          borderTopWidth: 1, 
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          alignItems: 'center',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginLeft: 8 }}>
+              No Professionals Available
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center' }}>
+            This service is currently not available in your area. Please check back later.
+          </Text>
+        </View>
+      )}
 
     </Container>
   );

@@ -6,10 +6,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { notifyServiceApproved, notifyServiceRejected } from '@/utils/pushNotifications';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, query, serverTimestamp, updateDoc, where, onSnapshot } from 'firebase/firestore';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 interface ProviderApplication {
@@ -19,9 +18,9 @@ interface ProviderApplication {
   phoneNumber?: string;
   approvalStatus: 'pending' | 'approved' | 'rejected';
   services: string[];
-  experience: number;
-  bio: string;
-  createdAt: any;
+  experience?: number | null;
+  bio?: string;
+  createdAt?: any;
 }
 
 const AdminProvidersScreen = observer(() => {
@@ -29,39 +28,44 @@ const AdminProvidersScreen = observer(() => {
   const [processingAction, setProcessingAction] = useState<{ userId: string; action: 'approve' | 'reject' } | null>(null);
 
   // Fetch pending provider applications
-  const { data: applications = [], refetch, isLoading } = useQuery({
-    queryKey: ['pending-providers'],
-    queryFn: async () => {
-      const providersQuery = query(
-        collection(db, 'providers'),
-        where('approvalStatus', '==', 'pending')
+  const [applications, setApplications] = useState<ProviderApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const providersQuery = query(
+      collection(db, 'providers'),
+      where('approvalStatus', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(providersQuery, async (snapshot) => {
+      setIsLoading(true);
+
+      const apps = await Promise.all(
+        snapshot.docs.map(async (providerDoc) => {
+          const providerData = providerDoc.data();
+          const userSnap = await getDoc(doc(db, 'users', providerDoc.id));
+          const userData = userSnap.exists() ? userSnap.data() : {};
+
+          return {
+            userId: providerDoc.id,
+            displayName: userData?.displayName,
+            email: userData?.email,
+            phoneNumber: userData?.phoneNumber,
+            services: providerData.services || [],
+            experience: typeof providerData.experience === 'number' ? providerData.experience : null,
+            bio: providerData.bio || '',
+            approvalStatus: providerData.approvalStatus || 'pending',
+            createdAt: providerData.createdAt,
+          } as ProviderApplication;
+        })
       );
-      
-      const snapshot = await getDocs(providersQuery);
-      const apps: ProviderApplication[] = [];
-      
-      for (const providerDoc of snapshot.docs) {
-        const providerData = providerDoc.data();
-        
-        // Get user details
-        const userDoc = await getDocs(
-          query(collection(db, 'users'), where('uid', '==', providerDoc.id))
-        );
-        
-        const userData = userDoc.docs[0]?.data();
-        
-        apps.push({
-          userId: providerDoc.id,
-          displayName: userData?.displayName,
-          email: userData?.email,
-          phoneNumber: userData?.phoneNumber,
-          ...providerData,
-        } as ProviderApplication);
-      }
-      
-      return apps;
-    },
-  });
+
+      setApplications(apps);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleApprove = async (userId: string) => {
     // Keep Alert for critical approval confirmation
@@ -98,7 +102,6 @@ const AdminProvidersScreen = observer(() => {
               await notifyServiceApproved(userId, 'provider-application', providerName);
               
               showSuccessMessage('Provider Approved', 'They will see Provider App on next login');
-              refetch();
             } catch (error: any) {
               console.error('Approval error:', error);
               showFailedMessage(
@@ -143,7 +146,6 @@ const AdminProvidersScreen = observer(() => {
               await notifyServiceRejected(userId, 'provider-application', providerName);
               
               showSuccessMessage('Application Rejected', 'Provider application has been rejected');
-              refetch();
             } catch (error: any) {
               console.error('Rejection error:', error);
               showFailedMessage(
@@ -198,19 +200,48 @@ const AdminProvidersScreen = observer(() => {
                     <Text className="text-sm mb-1" style={{ color: colors.textSecondary }}>
                       {app.email || app.phoneNumber}
                     </Text>
-                    <View className="flex-row items-center">
-                      <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                      <Text className="text-xs ml-1" style={{ color: colors.textSecondary }}>
-                        {app.experience} years experience
-                      </Text>
-                    </View>
+                    {typeof app.experience === 'number' && app.experience > 0 && (
+                      <View className="flex-row items-center">
+                        <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                        <Text className="text-xs ml-1" style={{ color: colors.textSecondary }}>
+                          {app.experience} years experience
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
-                {app.bio && (
+                {app.bio ? (
                   <Text className="text-sm mb-3" style={{ color: colors.text }}>
                     {app.bio}
                   </Text>
+                ) : null}
+
+                {app.services.length > 0 ? (
+                  <View className="mb-3">
+                    <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
+                      Services offered:
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      {app.services.map((service, idx) => (
+                        <View 
+                          key={idx}
+                          className="px-3 py-1 rounded-full"
+                          style={{ backgroundColor: `${colors.primary}15` }}
+                        >
+                          <Text className="text-xs" style={{ color: colors.primary }}>
+                            {service}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <View className="mb-3 px-3 py-2 rounded-lg" style={{ backgroundColor: `${colors.warning}15` }}>
+                    <Text className="text-xs" style={{ color: colors.warning }}>
+                      ⚠️ Application incomplete - Provider needs to complete application form
+                    </Text>
+                  </View>
                 )}
 
                 <View className="flex-row gap-2 mt-2">
