@@ -18,7 +18,13 @@
       "bundleIdentifier": "com.urbanclone.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location when open to show nearby services and track your location.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show nearby services and track your location."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show nearby services and track your location.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to location in the background to provide real-time tracking during active bookings.",
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps",
+          "googlemaps",
+          "maps"
+        ]
       },
       "googleServicesFile": "./GoogleService-Info.plist"
     },
@@ -32,7 +38,8 @@
       "package": "com.urbanclone.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -43,11 +50,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-location",
       [
         "expo-build-properties",
         {
           "ios": {
             "useFrameworks": "static"
+          },
+          "android": {
+            "enableProguardInReleaseBuilds": false
           }
         }
       ]
@@ -64,3 +75,4 @@
     "owner": "brilworks"
   }
 }
+

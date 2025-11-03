@@ -2,13 +2,15 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect } from 'expo-router';
+import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Text, View } from 'react-native';
 
-export default function SplashScreen() {
+const SplashScreen = observer(() => {
   const { colors } = useTheme();
   const { user, userProfile, loading, hasSeenOnboarding } = useAuth();
   const [showContent, setShowContent] = useState(false);
+  const [profileLoadingTimeout, setProfileLoadingTimeout] = useState(false);
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -19,22 +21,48 @@ export default function SplashScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-    // Timeout fallback - show content after 3 seconds max
+    // Timeout fallback - show content after 3 seconds max (prevents infinite loading)
     const fallback = setTimeout(() => {
-      console.log('⏱️ Timeout: Forcing navigation');
+      console.log('⏱️ Timeout: Forcing navigation after 3s');
       setShowContent(true);
     }, 3000);
 
     return () => clearTimeout(fallback);
   }, []);
 
-  // Show content once loading is done OR timeout
+  // Show content once loading is done OR user+profile available
+  // NOTE: With MobX observer(), this useEffect will run whenever loading, user, or userProfile changes
   useEffect(() => {
+    console.log('🔄 useEffect triggered - loading:', loading, 'user:', !!user, 'profile:', !!userProfile);
+    
+    // If loading is false, show content
     if (!loading) {
       console.log('✅ Auth loaded, user:', user?.uid, 'role:', userProfile?.role);
       setShowContent(true);
     }
-  }, [loading]);
+    
+    // If user exists and profile exists, show content immediately (even if loading is true)
+    if (user && userProfile) {
+      console.log('✅ User and profile both exist - showing content');
+      setShowContent(true);
+    }
+  }, [loading, user, userProfile]);
+
+  // Profile loading timeout (only for cases where profile document doesn't exist)
+  useEffect(() => {
+    if (user && !userProfile && loading) {
+      // Timeout: After 3 seconds, allow navigation even without profile
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ Profile loading timeout after 3s - forcing navigation');
+        setProfileLoadingTimeout(true);
+      }, 3000);
+      
+      return () => clearTimeout(timeout);
+    } else {
+      // Reset timeout if user/profile changes
+      setProfileLoadingTimeout(false);
+    }
+  }, [user, userProfile, loading]);
 
   // Wait for auth to load
   if (!showContent) {
@@ -73,7 +101,8 @@ export default function SplashScreen() {
   }
   
   // User is logged in but profile is loading - show loading
-  if (user && !userProfile) {
+  // NOTE: With MobX observer, this will update automatically when loading/userProfile changes
+  if (user && !userProfile && loading && !profileLoadingTimeout) {
     console.log('⏳ User logged in but profile loading...');
     return (
       <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
@@ -85,8 +114,16 @@ export default function SplashScreen() {
     );
   }
   
+  // After timeout, redirect anyway (only if profile document doesn't exist)
+  if (user && !userProfile && profileLoadingTimeout) {
+    console.log('⚠️ Profile loading timeout - redirecting to tabs');
+    return <Redirect href="/(tabs)" />;
+  }
+  
   // No user - redirect to auth
   console.log('❌ No user, redirecting to auth');
   if (hasSeenOnboarding) return <Redirect href="/auth/email" />;
   return <Redirect href="/onboarding" />;
-}
+});
+
+export default SplashScreen;

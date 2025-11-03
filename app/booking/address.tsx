@@ -23,6 +23,8 @@ export default function AddressBookingScreen() {
     state: '',
     pincode: '',
     landmark: '',
+    lat: undefined,
+    lng: undefined,
   });
 
   const [notes, setNotes] = useState('');
@@ -73,6 +75,8 @@ export default function AddressBookingScreen() {
         addressState: address.state,
         addressPincode: address.pincode,
         addressLandmark: address.landmark || '',
+        addressLat: address.lat?.toString() || '',
+        addressLng: address.lng?.toString() || '',
         notes: notes || '',
       },
     });

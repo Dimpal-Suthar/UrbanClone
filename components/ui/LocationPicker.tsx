@@ -1,3 +1,4 @@
+import { AddressMapPicker } from '@/components/maps/AddressMapPicker';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -138,63 +139,48 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
       </Card>
 
-      {/* Map Picker Modal - Placeholder for now */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {/* Map Picker Modal */}
+      <Modal visible={showModal} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
           <View
             style={{
-              flex: 1,
-              marginTop: 100,
-              backgroundColor: colors.background,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 16,
+              paddingTop: 60,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+              backgroundColor: colors.surface,
             }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 20,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
-              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>
-                Select Location
-              </Text>
-              <Pressable onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </Pressable>
-            </View>
-
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-              <Ionicons name="map-outline" size={64} color={colors.textSecondary} />
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: colors.text,
-                  marginTop: 16,
-                  textAlign: 'center',
-                }}
-              >
-                Map Integration Coming Soon
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: colors.textSecondary,
-                  marginTop: 8,
-                  textAlign: 'center',
-                }}
-              >
-                For now, please use "Use Current Location" or enter address manually
-              </Text>
-              <View style={{ marginTop: 24, width: '100%' }}>
-                <Button title="Close" onPress={() => setShowModal(false)} variant="outline" />
-              </View>
-            </View>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>
+              Select Location on Map
+            </Text>
+            <Pressable onPress={() => setShowModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </Pressable>
           </View>
+
+          <AddressMapPicker
+            onAddressSelect={(address, location) => {
+              onLocationSelect({
+                street: address.street,
+                city: address.city,
+                state: address.state,
+                pincode: address.pincode,
+                landmark: address.landmark,
+                lat: location.latitude,
+                lng: location.longitude,
+              });
+              setShowModal(false);
+            }}
+            initialLocation={
+              selectedAddress?.lat && selectedAddress?.lng
+                ? { latitude: selectedAddress.lat, longitude: selectedAddress.lng }
+                : undefined
+            }
+          />
         </View>
       </Modal>
     </>

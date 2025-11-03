@@ -33,6 +33,8 @@ export default function ConfirmBookingScreen() {
     addressState,
     addressPincode,
     addressLandmark,
+    addressLat,
+    addressLng,
     notes,
   } = useLocalSearchParams();
 
@@ -51,6 +53,8 @@ export default function ConfirmBookingScreen() {
     state: addressState as string,
     pincode: addressPincode as string,
     landmark: (addressLandmark as string) || '',
+    lat: addressLat ? parseFloat(addressLat as string) : undefined,
+    lng: addressLng ? parseFloat(addressLng as string) : undefined,
   };
 
   const dateObj = new Date(scheduledDate as string);
@@ -131,8 +135,13 @@ export default function ConfirmBookingScreen() {
         'Your booking has been confirmed. The professional will contact you shortly.'
       );
       
-      // Navigate to booking details
-      router.replace(`/booking/${bookingId}`);
+      // Navigate directly to booking details using replace
+      // This prevents user from going back to booking form
+      // Replace clears the navigation stack, so back button goes to bookings tab
+      router.replace({
+        pathname: '/booking/[id]',
+        params: { id: bookingId, fromBookingFlow: 'true' }
+      });
     } catch (error) {
       console.error('❌ Error creating booking:', error);
       showFailedMessage('Error', 'Failed to create booking. Please try again.');

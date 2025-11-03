@@ -1,3 +1,6 @@
+// Export maps types
+export * from './maps';
+
 export type UserRole = 'customer' | 'provider' | 'admin';
 
 export interface User {

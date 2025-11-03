@@ -2,7 +2,7 @@ import { auth, db } from '@/config/firebase';
 import authService, { UserProfile } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, Unsubscribe } from 'firebase/firestore';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 export class AuthStore {
@@ -39,11 +39,13 @@ export class AuthStore {
       
       runInAction(() => {
         this.user = firebaseUser;
-        this.loading = false;
+        // CRITICAL: Keep loading = true if user exists (wait for profile)
+        // Only set loading = false if user is null (logged out)
+        this.loading = firebaseUser !== null;
       });
 
       if (firebaseUser) {
-        // Set up real-time profile listener
+        // Set up real-time profile listener (will set loading = false when profile loads)
         this.setupProfileListener(firebaseUser.uid);
       } else {
         // Clean up listener and clear profile
@@ -53,6 +55,7 @@ export class AuthStore {
         }
         runInAction(() => {
           this.userProfile = null;
+          this.loading = false; // User logged out - stop loading
         });
       }
     });
@@ -69,24 +72,134 @@ export class AuthStore {
 
     console.log('👂 Setting up real-time profile listener for UID:', uid);
     
+    // FAILSAFE: Set timeout to stop loading after 5 seconds (prevents infinite loop)
+    // Reduced from 10s to 5s for faster recovery
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Profile listener timeout after 5s - stopping loading');
+      runInAction(() => {
+        if (this.loading) {
+          // CRITICAL: Always stop loading after timeout, even if profile exists
+          this.loading = false;
+          if (!this.userProfile) {
+            console.warn('⚠️ Profile loading timeout - continuing without profile');
+          } else {
+            console.log('✅ Profile loaded but loading state was still true - fixed');
+          }
+        }
+      });
+    }, 5000); // Reduced to 5 seconds for faster recovery
+    
     this.profileUnsubscribe = onSnapshot(
       doc(db, 'users', uid),
       (snapshot) => {
+        clearTimeout(timeoutId); // Clear timeout on success
+        
         if (snapshot.exists()) {
           const profile = snapshot.data() as UserProfile;
-          console.log('🔄 Profile updated in real-time. Role:', profile.role);
           
+          // Validate profile has required fields
+          if (!profile.role) {
+            console.warn('⚠️ Profile missing role field, defaulting to customer');
+            profile.role = 'customer';
+          }
+          
+          // Only log if role actually changed or first load
+          if (!this.userProfile || this.userProfile.role !== profile.role) {
+            console.log('🔄 Profile updated. Role:', profile.role);
+          }
+          
+          // CRITICAL: Use runInAction to ensure both updates happen atomically
+          // This single atomic update ensures MobX notifies all observers correctly
           runInAction(() => {
             this.userProfile = profile;
+            this.loading = false; // CRITICAL: Stop loading when profile is loaded
           });
+          
+          console.log('✅ Profile loaded successfully - Role:', profile.role);
         } else {
+          clearTimeout(timeoutId); // Clear timeout before creating profile
           console.warn('⚠️ User profile document does not exist');
+          
+          // CRITICAL: Stop loading immediately, then try to create profile
+          // This prevents infinite loading loop
+          runInAction(() => {
+            this.loading = false;
+          });
+          
+          // Try to create default profile in background (non-blocking)
+          this.createDefaultProfile(uid).catch((error) => {
+            console.error('❌ Profile creation failed:', error);
+            // Loading already stopped above
+          });
         }
       },
-      (error) => {
+      (error: any) => {
+        clearTimeout(timeoutId); // Clear timeout on error
+        
         console.error('❌ Profile listener error:', error);
+        
+        // CRITICAL: ALWAYS stop loading on error to prevent infinite loop
+        runInAction(() => {
+          this.loading = false;
+        });
+        
+        // Handle offline errors gracefully
+        if (error.code === 'unavailable' || error.code === 'failed-precondition') {
+          console.warn('⚠️ Firestore is offline. App will work in offline mode.');
+        }
       }
     );
+  }
+
+  /**
+   * Create default profile if it doesn't exist
+   */
+  private async createDefaultProfile(uid: string): Promise<void> {
+    try {
+      console.log('📝 Creating default profile for UID:', uid);
+      const user = this.user;
+      
+      if (!user) {
+        console.warn('⚠️ Cannot create profile: No user found');
+        runInAction(() => {
+          this.loading = false; // Stop loading if no user
+        });
+        return;
+      }
+      
+      const defaultProfile: UserProfile = {
+        uid,
+        role: 'customer', // CRITICAL: Always set role
+        email: user.email || '',
+        displayName: user.displayName || '',
+        authMethod: user.phoneNumber ? 'phone' : 'email',
+        emailVerified: user.emailVerified || false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      await setDoc(doc(db, 'users', uid), defaultProfile);
+      
+      runInAction(() => {
+        this.userProfile = defaultProfile;
+        this.loading = false; // CRITICAL: Stop loading on success
+      });
+      
+      console.log('✅ Default profile created successfully - Role:', defaultProfile.role);
+    } catch (error: any) {
+      console.error('❌ Error creating default profile:', error);
+      
+      // CRITICAL: ALWAYS stop loading, even if creation fails
+      // This prevents infinite "Loading profile..." loop
+      runInAction(() => {
+        this.loading = false;
+      });
+      
+      // If offline or permission denied, that's OK - user can complete profile later
+      if (error.code === 'unavailable' || error.code === 'permission-denied') {
+        console.warn('⚠️ Cannot create profile (offline or permission denied). User will complete profile later.');
+      }
+    }
   }
 
   /**

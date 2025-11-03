@@ -34,10 +34,19 @@ import {
 } from 'react-native';
 
 export default function BookingDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, fromBookingFlow } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  
+  // Handle back button - if coming from booking flow, go to bookings tab
+  const handleBackPress = () => {
+    if (fromBookingFlow === 'true') {
+      router.replace('/(tabs)/bookings');
+    } else {
+      router.back();
+    }
+  };
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -128,9 +137,19 @@ export default function BookingDetailScreen() {
     try {
       await markOnTheWayMutation.mutateAsync(id as string);
       showSuccessMessage('Success', 'Marked as on the way');
+      // Navigate to navigation screen after marking on the way
+      router.push(`/(provider)/booking-navigation?bookingId=${id}`);
     } catch (error) {
       showFailedMessage('Error', 'Failed to update status');
     }
+  };
+
+  const handleTrackProvider = () => {
+    router.push(`/booking/track?bookingId=${id}`);
+  };
+
+  const handleNavigateToCustomer = () => {
+    router.push(`/(provider)/booking-navigation?bookingId=${id}`);
   };
 
   const handleStartService = async () => {
@@ -297,7 +316,7 @@ export default function BookingDetailScreen() {
           <Text className="mt-4 text-xl font-bold text-center" style={{ color: colors.text }}>
             Booking Not Found
           </Text>
-          <Button title="Go Back" onPress={() => router.back()} variant="outline" className="mt-6" />
+          <Button title="Go Back" onPress={handleBackPress} variant="outline" className="mt-6" />
         </View>
       </Container>
     );
@@ -321,6 +340,7 @@ export default function BookingDetailScreen() {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
           paddingHorizontal: 24,
           paddingVertical: 16,
           borderBottomWidth: 1,
@@ -328,12 +348,38 @@ export default function BookingDetailScreen() {
           backgroundColor: colors.surface,
         }}
       >
-        <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, marginLeft: 16 }}>
-          Booking Details
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Pressable onPress={handleBackPress} style={{ padding: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, marginLeft: 8 }}>
+            Booking Details
+          </Text>
+        </View>
+        
+        {/* Message Button in Header */}
+        {booking.status !== 'pending' && (isCustomer || isProvider) && (
+          <Pressable
+            onPress={handleMessageProvider}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: `${colors.primary}15`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: 8,
+            }}
+            className="active:opacity-70"
+            disabled={createConversationMutation.isPending}
+          >
+            {createConversationMutation.isPending ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+            )}
+          </Pressable>
+        )}
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -553,49 +599,44 @@ export default function BookingDetailScreen() {
           {/* Customer Actions */}
           {isCustomer && (
             <View style={{ gap: 12 }}>
-              {/* Message Provider Button - Available after booking is accepted */}
-              {booking.status !== 'pending' && (
+              {/* Track Provider Button - Available when provider is on the way or service in progress */}
+              {(booking.status === 'on-the-way' || booking.status === 'in-progress') && (
                 <Button
-                  title="Message Provider"
-                  variant="outline"
-                  onPress={handleMessageProvider}
-                  icon="chatbubble-outline"
-                  loading={createConversationMutation.isPending}
+                  title="Track Provider"
+                  onPress={handleTrackProvider}
+                  icon="location"
+                  size="lg"
                 />
               )}
               
-              {(booking.status === 'pending' || booking.status === 'accepted') && (
-                <Button
-                  title="Cancel Booking"
-                  variant="outline"
-                  onPress={() => setShowCancelModal(true)}
-                  icon="close-circle"
-                />
-              )}
-              {booking.status === 'completed' && (
-                <Button
-                  title="Rate & Review"
-                  onPress={() => setShowReviewModal(true)}
-                  icon="star"
-                />
-              )}
+              {/* Action Row - Cancel/Rate & Review */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {(booking.status === 'pending' || booking.status === 'accepted') && (
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Cancel Booking"
+                      variant="outline"
+                      onPress={() => setShowCancelModal(true)}
+                      icon="close-circle"
+                    />
+                  </View>
+                )}
+                {booking.status === 'completed' && (
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Rate & Review"
+                      onPress={() => setShowReviewModal(true)}
+                      icon="star"
+                    />
+                  </View>
+                )}
+              </View>
             </View>
           )}
 
           {/* Provider Actions */}
           {isProvider && booking.status !== 'completed' && (
             <View style={{ gap: 12 }}>
-              {/* Message Customer Button - Available after booking is accepted */}
-              {booking.status !== 'pending' && (
-                <Button
-                  title="Message Customer"
-                  variant="outline"
-                  onPress={handleMessageProvider}
-                  icon="chatbubble-outline"
-                  loading={createConversationMutation.isPending}
-                />
-              )}
-
               {booking.status === 'pending' && (
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   <View style={{ flex: 1 }}>
@@ -610,17 +651,39 @@ export default function BookingDetailScreen() {
                   </View>
                 </View>
               )}
+              
               {booking.status === 'accepted' && (
-                <Button title="Mark On The Way" onPress={handleMarkOnTheWay} icon="car" />
+                <Button 
+                  title="Mark On The Way" 
+                  onPress={handleMarkOnTheWay} 
+                  icon="car"
+                  size="lg"
+                />
               )}
+              
               {booking.status === 'on-the-way' && (
-                <Button title="Start Service" onPress={handleStartService} icon="construct" />
+                <View style={{ gap: 12 }}>
+                  <Button 
+                    title="Navigate to Customer" 
+                    onPress={handleNavigateToCustomer} 
+                    icon="navigate"
+                    size="lg"
+                  />
+                  <Button 
+                    title="Start Service" 
+                    onPress={handleStartService} 
+                    icon="construct" 
+                    variant="outline"
+                  />
+                </View>
               )}
+              
               {booking.status === 'in-progress' && (
                 <Button
                   title="Complete Service"
                   onPress={handleCompleteService}
                   icon="checkmark-circle"
+                  size="lg"
                 />
               )}
             </View>
