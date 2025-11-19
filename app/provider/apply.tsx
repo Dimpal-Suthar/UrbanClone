@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
 import { db } from '@/config/firebase';
@@ -35,6 +36,11 @@ export default function ProviderApplicationScreen() {
     } else {
       setSelectedServices([...selectedServices, serviceId]);
     }
+  };
+
+  const handleExperienceChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '').slice(0, 2);
+    setExperience(numericValue);
   };
 
   const handleSubmit = async () => {
@@ -102,78 +108,73 @@ export default function ProviderApplicationScreen() {
             Start earning by offering your services
           </Text>
 
-          {/* Select Services */}
-          <Text className="text-lg font-bold mb-4" style={{ color: colors.text }}>
-            Which services do you offer?
-          </Text>
-          
-          <View className="mb-6">
-            {AVAILABLE_SERVICES.map((service) => (
-              <Pressable
-                key={service.id}
-                onPress={() => toggleService(service.id)}
-                className="mb-3"
-              >
-                <View
-                  className="flex-row items-center p-4 rounded-xl"
-                  style={{
-                    backgroundColor: selectedServices.includes(service.id) 
-                      ? `${colors.primary}20` 
-                      : colors.surface,
-                    borderWidth: 2,
-                    borderColor: selectedServices.includes(service.id) 
-                      ? colors.primary 
-                      : colors.border,
-                  }}
-                >
-                  <Ionicons 
-                    name={service.icon as any} 
-                    size={24} 
-                    color={selectedServices.includes(service.id) ? colors.primary : colors.text} 
-                  />
-                  <Text 
-                    className="ml-3 flex-1 text-base font-medium"
-                    style={{ color: colors.text }}
-                  >
-                    {service.name}
-                  </Text>
-                  {selectedServices.includes(service.id) && (
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                  )}
-                </View>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* Experience */}
-          <Input
-            label="Years of Experience"
-            leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
-            placeholder="e.g., 5"
-            value={experience}
-            onChangeText={setExperience}
-            keyboardType="number-pad"
-          />
-
-          {/* Bio */}
-          <View className="mb-6">
-            <Text className="text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
-              About You
+          <Card style={{ marginBottom: 24 }}>
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Which services do you offer?
             </Text>
-            <View
-              className="rounded-xl px-4 py-4"
-              style={{ backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border }}
-            >
-              <Input
-                placeholder="Tell customers about your skills and experience..."
-                value={bio}
-                onChangeText={setBio}
-                multiline
-                numberOfLines={4}
-                style={{ minHeight: 100, textAlignVertical: 'top' }}
-              />
+            <View className="mt-4">
+              {AVAILABLE_SERVICES.map((service) => (
+                <Pressable
+                  key={service.id}
+                  onPress={() => toggleService(service.id)}
+                  className="mb-3"
+                >
+                  <View
+                    className="flex-row items-center p-4 rounded-xl"
+                    style={{
+                      backgroundColor: selectedServices.includes(service.id)
+                        ? `${colors.primary}20`
+                        : colors.background,
+                      borderWidth: 2,
+                      borderColor: selectedServices.includes(service.id)
+                        ? colors.primary
+                        : colors.border,
+                    }}
+                  >
+                    <Ionicons
+                      name={service.icon as any}
+                      size={24}
+                      color={selectedServices.includes(service.id) ? colors.primary : colors.text}
+                    />
+                    <Text
+                      className="ml-3 flex-1 text-base font-medium"
+                      style={{ color: colors.text }}
+                    >
+                      {service.name}
+                    </Text>
+                    {selectedServices.includes(service.id) && (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                    )}
+                  </View>
+                </Pressable>
+              ))}
             </View>
-          </View>
+          </Card>
+
+          <Card style={{ marginBottom: 24 }}>
+            <Input
+              label="Years of Experience"
+              leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
+              placeholder="e.g., 5"
+              value={experience}
+              onChangeText={handleExperienceChange}
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+          </Card>
+
+          <Card style={{ marginBottom: 32 }}>
+            <Input
+              label="About You"
+              placeholder="Tell customers about your skills and experience..."
+              value={bio}
+              onChangeText={setBio}
+              multiline
+              numberOfLines={4}
+              style={{ minHeight: 120, textAlignVertical: 'top' }}
+              maxLength={500}
+            />
+          </Card>
 
           {/* Submit Button */}
           <Button

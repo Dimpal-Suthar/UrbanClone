@@ -64,12 +64,16 @@ const ProfileScreen = observer(() => {
       router.push(screen);
       return;
     }
+    if (screen === 'addresses') {
+      router.push('/addresses');
+      return;
+    }
     if (screen === 'edit-profile') {
       showInfoMessage('Coming Soon', 'Edit profile feature will be available soon');
       return;
     }
     // Add navigation logic for other menu items
-    console.log('Navigate to:', screen);
+    showInfoMessage('Coming Soon', 'This feature will be available soon');
   };
 
   const displayName = userProfile?.displayName || user?.displayName || 'User';

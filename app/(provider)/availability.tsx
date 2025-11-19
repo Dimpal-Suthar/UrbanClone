@@ -202,7 +202,7 @@ const ProviderAvailabilityScreen = observer(() => {
           paddingVertical: 12,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
         }}
       >
         <Pressable
@@ -429,7 +429,7 @@ const ProviderAvailabilityScreen = observer(() => {
           paddingBottom: Platform.OS === 'ios' ? 12 : 16,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,

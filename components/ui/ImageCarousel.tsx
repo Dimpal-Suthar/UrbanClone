@@ -1,6 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 interface ImageCarouselProps {
@@ -10,7 +10,7 @@ interface ImageCarouselProps {
   showFullScreen?: boolean;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   images,
@@ -21,6 +21,24 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   const { colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState<Record<string, { width: number; height: number }>>({});
+
+  useEffect(() => {
+    images.forEach((uri) => {
+      if (!imageDimensions[uri]) {
+        Image.getSize(
+          uri,
+          (width, heightValue) => {
+            setImageDimensions((prev) => {
+              if (prev[uri]) return prev;
+              return { ...prev, [uri]: { width, height: heightValue } };
+            });
+          },
+          () => {}
+        );
+      }
+    });
+  }, [images, imageDimensions]);
 
   if (!images || images.length === 0) {
     return (
@@ -149,15 +167,45 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
             className="flex-1"
           >
             {images.map((imageUri, index) => (
-              <View key={index} className="flex-1 items-center justify-center">
-                <Image
-                  source={{ uri: imageUri }}
-                  style={{ 
-                    width: screenWidth, 
-                    height: screenWidth * 0.75,
-                    resizeMode: 'contain'
-                  }}
-                />
+              <View
+                key={index}
+                style={{
+                  width: screenWidth,
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {(() => {
+                  const dims = imageDimensions[imageUri];
+                  const maxWidth = screenWidth;
+                  const headerOffset = 140; // approximate space for header + indicators
+                  const maxHeight = Math.max(screenHeight - headerOffset, screenHeight * 0.75);
+
+                  if (!dims) {
+                    return (
+                      <Image
+                        source={{ uri: imageUri }}
+                        style={{ width: screenWidth, height: maxHeight, resizeMode: 'contain' as const }}
+                      />
+                    );
+                  }
+
+                  const widthScale = maxWidth / dims.width;
+                  const heightScale = maxHeight / dims.height;
+                  const scale = Math.min(widthScale, heightScale);
+
+                  const fittedWidth = dims.width * scale;
+                  const fittedHeight = dims.height * scale;
+
+                  return (
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={{ width: fittedWidth, height: fittedHeight }}
+                      resizeMode="contain"
+                    />
+                  );
+                })()}
               </View>
             ))}
           </ScrollView>

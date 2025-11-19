@@ -186,7 +186,7 @@ export default function ServiceDetailScreen() {
         paddingVertical: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
       }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -223,7 +223,7 @@ export default function ServiceDetailScreen() {
                 </Text>
                 <View style={{ gap: 8 }}>
                   {service.whatsIncluded.map((item, index) => (
-                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View key={`whatsIncluded-${index}-${item.slice(0, 20)}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View 
                         style={{ 
                           width: 20, 
@@ -348,27 +348,35 @@ export default function ServiceDetailScreen() {
                 </Text>
               </Card>
             ) : (
-              providers.slice(0, 3).map((provider) => {
-                const offering = provider.offering;
-                const providerName = provider.name || provider.displayName || provider.email?.split('@')[0] || 'Professional Provider';
+              // Filter duplicates and show only unique providers
+              (() => {
+                // Create a Map to ensure uniqueness by provider ID
+                const uniqueProvidersMap = new Map();
+                providers.forEach((provider) => {
+                  if (provider?.id && !uniqueProvidersMap.has(provider.id)) {
+                    uniqueProvidersMap.set(provider.id, provider);
+                  }
+                });
+                const uniqueProviders = Array.from(uniqueProvidersMap.values()).slice(0, 3);
                 
-                return (
-                  <Pressable 
-                    key={provider.id} 
-                    onPress={() => {
-                      router.push(`/provider/${provider.id}`);
-                    }}
-                    className="active:opacity-70"
-                  >
+                return uniqueProviders.map((provider, index) => {
+                  const offering = provider.offering;
+                  const providerName = provider.name || provider.displayName || provider.email?.split('@')[0] || 'Professional Provider';
+                  
+                  return (
+                    <Pressable 
+                      key={`provider-${provider.id}-${index}`}
+                      onPress={() => {
+                        router.push(`/provider/${provider.id}`);
+                      }}
+                      className="active:opacity-70"
+                    >
                     <Card variant="default" style={{ 
                       marginBottom: 16, 
                       padding: 16,
                       borderRadius: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 8,
-                      elevation: 3
+                      borderWidth: 1,
+                      borderColor: colors.border,
                     }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {/* Provider Profile Image with Initials */}
@@ -421,8 +429,8 @@ export default function ServiceDetailScreen() {
                           Work Examples ({offering.images.length})
                         </Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                          {offering.images.slice(0, 4).map((imageUri, index) => (
-                            <View key={index} style={{ marginRight: 8 }}>
+                          {offering.images.slice(0, 4).map((imageUri: string, index: number) => (
+                            <View key={`${provider.id}-image-${index}-${imageUri?.slice(-20) || index}`} style={{ marginRight: 8 }}>
                               <Image
                                 source={{ uri: imageUri }}
                                 style={{ 
@@ -439,7 +447,7 @@ export default function ServiceDetailScreen() {
                               width: 60, 
                               height: 60, 
                               borderRadius: 6, 
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.background,
                               alignItems: 'center',
                               justifyContent: 'center',
                               borderWidth: 1,
@@ -456,7 +464,8 @@ export default function ServiceDetailScreen() {
                   </Card>
                 </Pressable>
               );
-            })
+              });
+              })()
           )}
           </View>
 
@@ -550,7 +559,7 @@ export default function ServiceDetailScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             {[...Array(5)].map((_, i) => (
                               <Ionicons
-                                key={i}
+                                key={`star-${review.id}-${i}`}
                                 name={i < review.rating ? "star" : "star-outline"}
                                 size={14}
                                 color="#FFB800"
@@ -594,7 +603,7 @@ export default function ServiceDetailScreen() {
           paddingVertical: 16, 
           borderTopWidth: 1, 
           borderTopColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
         }}>
           <Button
             title="Book Now"
@@ -615,7 +624,7 @@ export default function ServiceDetailScreen() {
           paddingVertical: 16, 
           borderTopWidth: 1, 
           borderTopColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           alignItems: 'center',
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>

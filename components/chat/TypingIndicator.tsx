@@ -75,7 +75,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ userName }) =>
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             borderRadius: 16,
             paddingHorizontal: 12,
             paddingVertical: 8,

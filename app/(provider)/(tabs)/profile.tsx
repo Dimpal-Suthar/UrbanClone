@@ -15,10 +15,9 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'briefcase-outline', label: 'Provider Details', screen: '/provider/edit-details' },
-  { id: '3', icon: 'document-text-outline', label: 'My Documents', screen: 'documents' },
-  { id: '4', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
-  { id: '5', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '6', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '3', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
+  { id: '4', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
+  { id: '5', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
 ];
 
 const ProviderProfileScreen = observer(() => {
@@ -54,12 +53,15 @@ const ProviderProfileScreen = observer(() => {
       router.push(screen);
       return;
     }
-    if (screen === 'edit-profile') {
-      showInfoMessage('Coming Soon', 'Edit profile feature will be available soon');
+    if (screen === 'reviews') {
+      if (!user?.uid) {
+        showInfoMessage('Profile unavailable', 'Please sign in again to view reviews.');
+        return;
+      }
+      router.push(`/provider/reviews/${user.uid}`);
       return;
     }
-    // Add navigation logic for other menu items
-    console.log('Navigate to:', screen);
+    showInfoMessage('Coming Soon', 'This section will be available soon.');
   };
 
   const displayName = userProfile?.displayName || user?.displayName || 'Provider';

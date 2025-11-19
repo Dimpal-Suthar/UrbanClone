@@ -71,8 +71,15 @@ export const getProvidersForService = async (serviceId: string): Promise<Array<U
       })
     );
     
-    // Filter out any null values and return
-    return providers.filter((provider): provider is User & { offering: ProviderServiceOffering } => provider !== null);
+    // Filter out any null values
+    const validProviders = providers.filter((provider): provider is User & { offering: ProviderServiceOffering } => provider !== null);
+    
+    // Remove duplicates - if a provider has multiple offerings for the same service, keep only the first one
+    const uniqueProviders = validProviders.filter((provider, index, self) => 
+      index === self.findIndex((p) => p.id === provider.id)
+    );
+    
+    return uniqueProviders;
   } catch (error) {
     console.error('Error fetching providers for service:', error);
     throw new Error('Failed to fetch providers');

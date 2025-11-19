@@ -131,7 +131,7 @@ const AdminServicesScreen = observer(() => {
                       {service.imageUrl ? (
                         <Image source={{ uri: service.imageUrl }} className="w-full h-full" resizeMode="cover" />
                       ) : (
-                        <View className="w-full h-full items-center justify-center" style={{ backgroundColor: colors.surface }}>
+                        <View className="w-full h-full items-center justify-center" style={{ backgroundColor: colors.background }}>
                           <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                         </View>
                       )}
@@ -379,7 +379,7 @@ const ServiceFormModal = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         {/* Modern Header */}
-        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.surface }}>
+        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between mb-4">
             <View>
               <Text className="text-2xl font-bold" style={{ color: colors.text }}>
@@ -470,7 +470,7 @@ const ServiceFormModal = ({
               numberOfLines={4}
               className="p-4 rounded-xl"
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: colors.background,
                 borderWidth: 1.5,
                 borderColor: colors.border,
                 color: colors.text,
@@ -490,7 +490,7 @@ const ServiceFormModal = ({
               onPress={() => setShowCategoryPicker(!showCategoryPicker)}
               className="p-4 rounded-2xl flex-row items-center justify-between active:opacity-70"
               style={{ 
-                backgroundColor: colors.surface, 
+                backgroundColor: colors.background, 
                 borderWidth: 2, 
                 borderColor: showCategoryPicker ? colors.primary : colors.border 
               }}
@@ -523,7 +523,7 @@ const ServiceFormModal = ({
             </Pressable>
 
             {showCategoryPicker && (
-              <View className="mt-3 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
+              <View className="mt-3 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}>
                 {SERVICE_CATEGORIES.map((cat, index) => (
                   <Pressable
                     key={cat.id}
@@ -596,7 +596,7 @@ const ServiceFormModal = ({
                 placeholder="e.g., Deep cleaning of all rooms"
                 className="flex-1 p-4 rounded-xl"
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.background,
                   borderWidth: 1.5,
                   borderColor: colors.border,
                   color: colors.text,
@@ -624,7 +624,7 @@ const ServiceFormModal = ({
                   <View
                     key={index}
                     className="flex-row items-center justify-between p-3 rounded-xl"
-                    style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+                    style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}
                   >
                     <View className="flex-row items-center flex-1">
                       <View 
@@ -657,7 +657,7 @@ const ServiceFormModal = ({
         </ScrollView>
 
         {/* Modern Footer */}
-        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border }}>
           <View className="flex-row gap-3">
             <Pressable
               onPress={onClose}

@@ -1,4 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
 
 /**
  * Message types that can be sent in chat
@@ -17,6 +16,7 @@ export interface Message {
   text: string;
   type: MessageType;
   imageUrl?: string;
+  imageUrls?: string[];
   location?: {
     lat: number;
     lng: number;
@@ -59,6 +59,12 @@ export interface Conversation {
   unreadCount: {
     [userId: string]: number;
   };
+  typing?: {
+    [userId: string]: {
+      isTyping: boolean;
+      updatedAt?: Date;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +77,7 @@ export interface CreateMessageInput {
   text: string;
   type?: MessageType;
   imageUrl?: string;
+  imageUrls?: string[];
   location?: {
     lat: number;
     lng: number;

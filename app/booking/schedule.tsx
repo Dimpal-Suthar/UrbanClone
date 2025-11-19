@@ -52,12 +52,15 @@ export default function ScheduleBookingScreen() {
   );
 
   // Auto-select first provider if none preselected and providers are loaded
+  // Use a ref to prevent multiple auto-selections
+  const hasAutoSelected = React.useRef(false);
   React.useEffect(() => {
-    if (!selectedProviderId && providers.length > 0) {
+    if (!selectedProviderId && providers.length > 0 && !hasAutoSelected.current) {
       console.log('🔧 Auto-selecting first provider:', providers[0].id);
       setSelectedProviderId(providers[0].id);
+      hasAutoSelected.current = true;
     }
-  }, [providers, selectedProviderId]);
+  }, [providers.length, selectedProviderId]);
 
   // Get available slots for selected provider and date
   const { data: availabilityCheck, isLoading: loadingAvailability } = useAvailableSlots(
@@ -212,7 +215,7 @@ export default function ScheduleBookingScreen() {
             </Text>
 
             {providers.length === 0 ? (
-              <View className="items-center py-8 px-6 rounded-2xl" style={{ backgroundColor: colors.surface }}>
+              <View className="items-center py-8 px-6 rounded-2xl" style={{ backgroundColor: colors.background }}>
                 <Ionicons name="person-outline" size={48} color={colors.textSecondary} />
                 <Text className="mt-2 text-base" style={{ color: colors.text }}>
                   No professionals available

@@ -1,19 +1,6 @@
 import { db } from '@/config/firebase';
 import { Booking, BookingStatus, CreateBookingInput, UpdateBookingInput } from '@/types';
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
-import {
   notifyBookingAccepted,
   notifyBookingCancelled,
   notifyBookingCompleted,
@@ -22,6 +9,20 @@ import {
   notifyBookingRejected,
   notifyBookingStarted,
 } from '@/utils/pushNotifications';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 /**
  * Create a new booking
@@ -375,17 +376,38 @@ export const completeBooking = async (
   images?: string[]
 ): Promise<void> => {
   try {
+    // First get the booking to get providerId
+    const booking = await getBookingById(bookingId);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
     const updates: UpdateBookingInput = {
       status: 'completed',
     };
+    // Note: updateBooking automatically sets completedAt when status is 'completed'
     if (images && images.length > 0) {
       updates.images = images;
     }
     await updateBooking(bookingId, updates);
     console.log('✅ Booking completed:', bookingId);
 
+    // Update provider's completedJobs count
+    if (booking.providerId) {
+      try {
+        const providerRef = doc(db, 'users', booking.providerId);
+        await updateDoc(providerRef, {
+          completedJobs: increment(1),
+          updatedAt: serverTimestamp(),
+        });
+        console.log('✅ Updated provider completedJobs count:', booking.providerId);
+      } catch (error) {
+        console.error('⚠️ Error updating provider completedJobs (non-critical):', error);
+        // Don't throw - booking completion should succeed even if stats update fails
+      }
+    }
+
     // Send push notification to customer
-    const booking = await getBookingById(bookingId);
     if (booking) {
       await notifyBookingCompleted(
         booking.customerId,

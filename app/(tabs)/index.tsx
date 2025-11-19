@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 const HomeScreen = observer(() => {
   const router = useRouter();
@@ -51,26 +51,17 @@ const HomeScreen = observer(() => {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-2 pb-6">
-          <View className="flex-row items-center justify-between mb-6">
-            <View>
-              <Text className="text-2xl font-bold" style={{ color: colors.text }}>
-                {getGreeting()}! 👋
-              </Text>
-              <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                Hi {userProfile?.displayName || 'there'}, what service do you need?
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => {/* Navigate to notifications */}}
-              className="w-12 h-12 rounded-full items-center justify-center active:opacity-70"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
-            </Pressable>
+          <View className="mb-4">
+            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              {getGreeting()}! 👋
+            </Text>
+            <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+              Hi {userProfile?.displayName || 'there'}, what service do you need?
+            </Text>
           </View>
 
           {/* Search Bar */}
-          <View className="flex-row items-center rounded-xl px-4 py-3 mb-6" style={{ backgroundColor: colors.surface }}>
+          <View className="flex-row items-center rounded-xl border border-gray-300 px-4 mb-4" style={{ backgroundColor: colors.background, paddingVertical: Platform.OS === 'ios' ? 8 : 4 }}>
             <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
               className="flex-1 ml-3 text-base"

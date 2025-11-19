@@ -6,16 +6,8 @@ interface CardProps extends ViewProps {
   variant?: 'default' | 'elevated';
 }
 
-export function Card({ children, variant = 'default', style, ...props }: CardProps) {
+export function Card({ children, style, ...props }: CardProps) {
   const { colors } = useTheme();
-
-  const shadowStyle = variant === 'elevated' ? {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  } : {};
 
   return (
     <View
@@ -23,11 +15,10 @@ export function Card({ children, variant = 'default', style, ...props }: CardPro
         {
           backgroundColor: colors.background,
           borderColor: colors.border,
-          borderWidth: 0.5,
+          borderWidth: 1,
           borderRadius: 16,
           padding: 16,
         },
-        shadowStyle,
         style,
       ]}
       {...props}

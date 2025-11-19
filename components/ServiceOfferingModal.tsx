@@ -105,7 +105,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         {/* Header */}
-        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.surface }}>
+        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between mb-4">
             <View>
               <Text className="text-2xl font-bold" style={{ color: colors.text }}>
@@ -135,7 +135,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
               onPress={() => setShowServicePicker(!showServicePicker)}
               className="p-4 rounded-2xl flex-row items-center justify-between active:opacity-70"
               style={{ 
-                backgroundColor: colors.surface, 
+                backgroundColor: colors.background, 
                 borderWidth: 2, 
                 borderColor: showServicePicker ? colors.primary : colors.border 
               }}
@@ -172,7 +172,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
             </Pressable>
 
             {showServicePicker && (
-              <View className="mt-3 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, maxHeight: 300 }}>
+              <View className="mt-3 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, maxHeight: 300 }}>
                 <ScrollView showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
                   {allServices.map((service, index) => (
                   <Pressable
@@ -244,7 +244,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
               numberOfLines={4}
               className="p-4 rounded-xl"
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: colors.background,
                 borderWidth: 1.5,
                 borderColor: colors.border,
                 color: colors.text,
@@ -275,7 +275,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
               <View 
                 className="rounded-2xl overflow-hidden"
                 style={{ 
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.background,
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
@@ -299,7 +299,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
                         onPress={() => setShowImagePicker(true)}
                         disabled={uploadingImage}
                         className="w-24 h-24 rounded-xl items-center justify-center border-2 border-dashed"
-                        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+                        style={{ borderColor: colors.border, backgroundColor: colors.background }}
                       >
                         {uploadingImage ? (
                           <ActivityIndicator size="small" color={colors.primary} />
@@ -339,7 +339,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
         </ScrollView>
 
         {/* Footer */}
-        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border }}>
           <View className="flex-row gap-3">
             <Pressable
               onPress={onClose}

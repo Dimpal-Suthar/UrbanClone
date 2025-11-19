@@ -4,17 +4,30 @@ import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
 import { LocationPicker } from '@/components/ui/LocationPicker';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useSavedAddresses } from '@/hooks/useSavedAddresses';
 import { BookingAddress } from '@/types';
 import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View
+} from 'react-native';
 
 export default function AddressBookingScreen() {
   const { serviceId, providerId, scheduledDate, scheduledSlot } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
+  const { user } = useAuth();
+
+  const { data: savedAddresses = [], isLoading: loadingAddresses } = useSavedAddresses(user?.uid || null);
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
 
   const [address, setAddress] = useState<BookingAddress>({
     street: '',
@@ -28,6 +41,20 @@ export default function AddressBookingScreen() {
   });
 
   const [notes, setNotes] = useState('');
+
+  const handleSelectSavedAddress = (savedAddress: any) => {
+    setAddress({
+      street: savedAddress.street,
+      apartment: savedAddress.apartment || '',
+      city: savedAddress.city,
+      state: savedAddress.state,
+      pincode: savedAddress.pincode,
+      landmark: savedAddress.landmark || '',
+      lat: savedAddress.lat,
+      lng: savedAddress.lng,
+    });
+    setShowSavedAddresses(false);
+  };
 
   const handleLocationSelect = (locationData: Partial<BookingAddress>) => {
     setAddress(prev => ({
@@ -93,7 +120,7 @@ export default function AddressBookingScreen() {
           paddingVertical: 12,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
         }}
       >
         <Pressable 
@@ -125,6 +152,84 @@ export default function AddressBookingScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="px-5 pt-5">
+            {/* Saved Addresses Section */}
+            {savedAddresses.length > 0 && (
+              <Card variant="default" className="p-4 mb-4">
+                <Pressable
+                  onPress={() => setShowSavedAddresses(!showSavedAddresses)}
+                  className="active:opacity-70"
+                >
+                  <View className="flex-row items-center justify-between mb-3">
+                    <View className="flex-row items-center">
+                      <Ionicons name="bookmark" size={20} color={colors.primary} />
+                      <Text className="ml-2 text-base font-bold" style={{ color: colors.text }}>
+                        Saved Addresses
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={showSavedAddresses ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.primary}
+                    />
+                  </View>
+                </Pressable>
+
+                {showSavedAddresses && (
+                  <View className="gap-2">
+                    {savedAddresses.map((savedAddress) => (
+                      <Pressable
+                        key={savedAddress.id}
+                        onPress={() => handleSelectSavedAddress(savedAddress)}
+                        className="p-3 rounded-lg active:opacity-70"
+                        style={{
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <View className="flex-row items-center mb-1">
+                          <Ionicons name="location" size={16} color={colors.primary} />
+                          <Text className="ml-2 text-sm font-semibold" style={{ color: colors.text }}>
+                            {savedAddress.label}
+                          </Text>
+                          {savedAddress.isDefault && (
+                            <View
+                              className="ml-2 px-2 py-0.5 rounded"
+                              style={{ backgroundColor: `${colors.success}20` }}
+                            >
+                              <Text className="text-xs font-bold" style={{ color: colors.success }}>
+                                DEFAULT
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text className="text-sm" style={{ color: colors.text }}>
+                          {savedAddress.street}
+                          {savedAddress.apartment ? `, ${savedAddress.apartment}` : ''}
+                        </Text>
+                        <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                          {savedAddress.city}, {savedAddress.state} - {savedAddress.pincode}
+                        </Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      onPress={() => router.push('/addresses')}
+                      className="p-3 rounded-lg active:opacity-70"
+                      style={{
+                        backgroundColor: `${colors.primary}10`,
+                        borderWidth: 1,
+                        borderColor: colors.primary,
+                      }}
+                    >
+                      <Text className="text-center text-sm font-semibold" style={{ color: colors.primary }}>
+                        Manage Saved Addresses →
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </Card>
+            )}
+
             {/* Location Picker */}
             <LocationPicker
               onLocationSelect={handleLocationSelect}
@@ -278,7 +383,7 @@ export default function AddressBookingScreen() {
           style={{
             paddingBottom: Platform.OS === 'ios' ? 12 : 16,
             borderTopColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,

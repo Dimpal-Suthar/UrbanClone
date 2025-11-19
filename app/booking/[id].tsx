@@ -345,7 +345,7 @@ export default function BookingDetailScreen() {
           paddingVertical: 16,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -593,7 +593,7 @@ export default function BookingDetailScreen() {
             paddingVertical: 16,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
           }}
         >
           {/* Customer Actions */}

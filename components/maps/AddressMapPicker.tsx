@@ -195,7 +195,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
   return (
     <View style={styles.container}>
       {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
         <View style={styles.searchInputContainer}>
           <Ionicons 
             name="search" 
@@ -273,7 +273,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
 
       {/* Current Location Button */}
       <Pressable
-        style={[styles.locationButton, { backgroundColor: colors.surface }]}
+        style={[styles.locationButton, { backgroundColor: colors.background }]}
         onPress={getCurrentLocation}
         disabled={loading}
       >

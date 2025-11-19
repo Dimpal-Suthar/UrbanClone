@@ -1,15 +1,15 @@
 import { useAuth } from '@/hooks/useAuth';
 import {
   getOrCreateConversation,
-  getUserConversations,
   getTotalUnreadCount,
+  getUserConversations,
   markMessagesAsRead,
+  subscribeToUserConversations,
 } from '@/services/chatService';
 import { Conversation, CreateConversationInput } from '@/types/chat';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DocumentSnapshot } from 'firebase/firestore';
 import { useEffect } from 'react';
-import { subscribeToUserConversations } from '@/services/chatService';
 
 // Query keys
 export const conversationKeys = {
@@ -32,7 +32,7 @@ export const useConversations = (userId: string | null) => {
     },
     enabled: !!userId,
     getNextPageParam: (lastPage) => lastPage.lastDoc,
-    initialPageParam: undefined,
+    initialPageParam: undefined as DocumentSnapshot | undefined,
   });
 };
 
@@ -140,12 +140,62 @@ export const useConversationRealtime = (conversationId: string | null) => {
  */
 export const useConversationsListRealtime = (userId: string | null) => {
   const queryClient = useQueryClient();
-
+ 
   useEffect(() => {
     if (!userId) return;
-    const unsubscribe = subscribeToUserConversations(userId, () => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list(userId) });
-    });
+    const unsubscribe = subscribeToUserConversations(
+      userId,
+      (conversation, changeType) => {
+         queryClient.setQueryData(
+           conversationKeys.list(userId),
+           (old: any) => {
+             if (!old) return old;
+ 
+            let updated = false;
+            const pagesWithUpdate = old.pages.map((page: any) => {
+              const index = page.conversations.findIndex((conv: Conversation) => conv.id === conversation.id);
+              if (index === -1) {
+                return page;
+              }
+              const updatedConversations = [...page.conversations];
+              updatedConversations[index] = conversation;
+              updated = true;
+              return {
+                ...page,
+                conversations: updatedConversations,
+              };
+            });
+
+            if (changeType === 'removed') {
+              return {
+                ...old,
+                pages: pagesWithUpdate.map((page: any) => ({
+                  ...page,
+                  conversations: page.conversations.filter((conv: Conversation) => conv.id !== conversation.id),
+                })),
+              };
+            }
+
+            if (!updated && pagesWithUpdate.length > 0) {
+              pagesWithUpdate[0] = {
+                ...pagesWithUpdate[0],
+                conversations: [conversation, ...pagesWithUpdate[0].conversations],
+              };
+            }
+
+            return {
+              ...old,
+              pages: pagesWithUpdate,
+            };
+          }
+        );
+ 
+        queryClient.setQueryData(
+          conversationKeys.detail(conversation.id),
+          conversation
+        );
+      }
+    );
     return () => unsubscribe();
   }, [userId, queryClient]);
 };

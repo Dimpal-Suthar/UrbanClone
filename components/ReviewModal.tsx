@@ -249,7 +249,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                         width: 100,
                         height: 100,
                         borderRadius: 12,
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.background,
                       }}
                     />
                     <Pressable
@@ -332,7 +332,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             paddingVertical: 16,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             gap: 12,
           }}
         >

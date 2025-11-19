@@ -50,7 +50,7 @@ export const ProviderCategoryModal: React.FC<ProviderCategoryModalProps> = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         {/* Header */}
-        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.surface }}>
+        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between mb-4">
             <View>
               <Text className="text-2xl font-bold" style={{ color: colors.text }}>
@@ -146,7 +146,7 @@ export const ProviderCategoryModal: React.FC<ProviderCategoryModalProps> = ({
                           <View 
                             className="w-8 h-8 rounded-full items-center justify-center"
                             style={{ 
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.background,
                               borderWidth: 2,
                               borderColor: colors.border
                             }}
@@ -183,7 +183,7 @@ export const ProviderCategoryModal: React.FC<ProviderCategoryModalProps> = ({
         </ScrollView>
 
         {/* Footer */}
-        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border }}>
           <View className="flex-row gap-3">
             <Pressable
               onPress={onClose}

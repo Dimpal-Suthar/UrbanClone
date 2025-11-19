@@ -46,7 +46,7 @@ export default function AllReviewsScreen() {
         paddingVertical: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
       }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />

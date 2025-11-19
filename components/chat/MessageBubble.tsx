@@ -52,7 +52,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             width: 32,
             height: 32,
             borderRadius: 16,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             marginRight: 8,
             overflow: 'hidden',
           }}
@@ -107,19 +107,80 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           }}
         >
           {/* Image Message */}
-          {message.type === 'image' && message.imageUrl && (
-            <Pressable onPress={() => onImagePress?.(message.imageUrl!)}>
-              <Image
-                source={{ uri: message.imageUrl }}
-                style={{
-                  width: 200,
-                  height: 200,
-                  borderRadius: 8,
-                  marginBottom: message.text ? 8 : 0,
-                }}
-                resizeMode="cover"
-              />
-            </Pressable>
+          {message.type === 'image' && (
+             <View
+               style={{
+                 flexDirection: 'row',
+                 flexWrap: 'wrap',
+                 marginBottom: message.text ? 8 : 0,
+                 maxWidth: 248,
+               }}
+             >
+               {(message.imageUrls && message.imageUrls.length > 0
+                 ? message.imageUrls
+                 : message.imageUrl
+                 ? [message.imageUrl]
+                 : []
+               ).map((imageUrl, index, array) => {
+                const count = array.length;
+                const GAP = 8;
+                const BASE = 248;
+
+                const { width: tileWidth, height: tileHeight } = (() => {
+                  if (count === 1) {
+                    return { width: BASE, height: BASE };
+                  }
+                  if (count === 2) {
+                    const size = (BASE - GAP) / 2;
+                    return { width: size, height: size };
+                  }
+                  if (count === 3) {
+                    if (index < 2) {
+                      const size = (BASE - GAP) / 2;
+                      return { width: size, height: size };
+                    }
+                    return { width: BASE, height: (BASE - GAP) / 2 };
+                  }
+                  // count >= 4 (show 2x2 grid, ignore extra images)
+                  const size = (BASE - GAP) / 2;
+                  return { width: size, height: size };
+                })();
+
+                const marginRight = (() => {
+                  if (count === 1) return 0;
+                  if (count === 2) return index === 0 ? GAP : 0;
+                  if (count === 3) return index === 0 ? GAP : 0;
+                  return index % 2 === 0 ? GAP : 0;
+                })();
+
+                const marginBottom = (() => {
+                  if (count === 1 || count === 2) return 0;
+                  if (count === 3) return index < 2 ? GAP : 0;
+                  return index < 2 ? GAP : 0;
+                })();
+ 
+                return (
+                  <Pressable
+                    key={`${imageUrl}-${index}`}
+                    onPress={() => onImagePress?.(imageUrl)}
+                    style={{
+                      marginRight,
+                      marginBottom,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: imageUrl }}
+                      style={{
+                        width: tileWidth,
+                        height: tileHeight,
+                        borderRadius: 10,
+                      }}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
 
           {/* Location Message */}

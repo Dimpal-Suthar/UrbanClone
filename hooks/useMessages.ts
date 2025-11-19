@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getMessages, sendMessage } from '@/services/chatService';
 import { sendPushNotification } from '@/services/notificationService';
 import { CreateMessageInput, Message } from '@/types/chat';
-import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
+import { showFailedMessage } from '@/utils/toast';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DocumentSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
@@ -123,41 +123,58 @@ export const useMessagesRealtime = (conversationId: string | null) => {
 
     const unsubscribe = subscribeToMessages(
       conversationId,
-      (message: Message) => {
-        // Add new message to cache
-        queryClient.setQueryData(
-          messageKeys.list(conversationId),
-          (old: any) => {
-            if (!old) return old;
+      (message: Message, changeType: 'added' | 'modified' | 'removed') => {
+        if (changeType === 'added') {
+          queryClient.setQueryData(
+            messageKeys.list(conversationId),
+            (old: any) => {
+              if (!old) return old;
 
-            // Check if message already exists
-            const allMessages = old.pages.flatMap((page: any) => page.messages);
-            const exists = allMessages.some((m: Message) => m.id === message.id);
+              const allMessages = old.pages.flatMap((page: any) => page.messages);
+              const exists = allMessages.some((m: Message) => m.id === message.id);
 
-            if (exists) return old;
+              if (exists) return old;
 
-            // Add to first page (prepend, not append, since FlatList is inverted)
-            const newPages = [...old.pages];
-            if (newPages[0]) {
-              newPages[0] = {
-                ...newPages[0],
-                messages: [message, ...newPages[0].messages],
+              const newPages = [...old.pages];
+              if (newPages[0]) {
+                newPages[0] = {
+                  ...newPages[0],
+                  messages: [message, ...newPages[0].messages],
+                };
+              }
+
+              setNewMessageCount(prev => prev + 1);
+
+              return {
+                ...old,
+                pages: newPages,
               };
             }
+          );
 
-            setNewMessageCount(prev => prev + 1);
-
-            return {
-              ...old,
-              pages: newPages,
-            };
-          }
-        );
-
-        // Invalidate conversation to update last message
-        queryClient.invalidateQueries({ 
-          queryKey: conversationKeys.detail(conversationId) 
-        });
+          queryClient.invalidateQueries({
+            queryKey: conversationKeys.detail(conversationId),
+          });
+        } else if (changeType === 'modified') {
+          queryClient.setQueryData(
+            messageKeys.list(conversationId),
+            (old: any) => {
+              if (!old) return old;
+ 
+               const newPages = old.pages.map((page: any) => {
+                const updatedMessages = page.messages.map((m: Message) =>
+                  m.id === message.id ? { ...m, ...message } : m
+                );
+                return { ...page, messages: updatedMessages };
+              });
+ 
+               return {
+                 ...old,
+                 pages: newPages,
+               };
+            }
+          );
+        }
       }
     );
 

@@ -141,7 +141,7 @@ export default function ProviderNavigationScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Pressable onPress={() => router.back()} style={styles.backButtonIcon}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>

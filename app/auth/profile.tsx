@@ -61,7 +61,7 @@ const ProfileSetupScreen = observer(() => {
           <View className="items-center mb-8">
             <View 
               className="w-24 h-24 rounded-full items-center justify-center"
-              style={{ backgroundColor: colors.surface }}
+              style={{ backgroundColor: colors.background }}
             >
               <Text className="text-4xl">👤</Text>
             </View>
@@ -78,7 +78,7 @@ const ProfileSetupScreen = observer(() => {
             <TextInput
               className="rounded-xl px-4 py-4 text-base font-medium"
               style={{ 
-                backgroundColor: colors.surface, 
+                backgroundColor: colors.background, 
                 color: colors.text,
                 borderWidth: 1,
                 borderColor: colors.border 
@@ -99,7 +99,7 @@ const ProfileSetupScreen = observer(() => {
             <TextInput
               className="rounded-xl px-4 py-4 text-base font-medium"
               style={{ 
-                backgroundColor: colors.surface, 
+                backgroundColor: colors.background, 
                 color: colors.text,
                 borderWidth: 1,
                 borderColor: colors.border 

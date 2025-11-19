@@ -39,6 +39,8 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
   const unreadCount = conversation.unreadCount[currentUserId] || 0;
   const hasUnread = unreadCount > 0;
+  const typingEntry = conversation.typing?.[otherUserId];
+  const isTyping = typingEntry?.isTyping;
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -57,6 +59,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
   };
 
   const getLastMessagePreview = () => {
+    if (isTyping) return 'Typing…';
     if (!conversation.lastMessage) return 'No messages yet';
     
     const { text, type, senderId } = conversation.lastMessage;
@@ -113,8 +116,8 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
               <Text
                 style={{
                   fontSize: 14,
-                  color: hasUnread ? colors.text : colors.textSecondary,
-                  fontWeight: hasUnread ? '500' : '400',
+                  color: isTyping ? colors.primary : hasUnread ? colors.text : colors.textSecondary,
+                  fontWeight: isTyping ? '600' : hasUnread ? '500' : '400',
                   flex: 1,
                 }}
                 numberOfLines={1}

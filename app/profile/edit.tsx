@@ -3,8 +3,10 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { Input } from '@/components/ui/Input';
+import { LocationPicker } from '@/components/ui/LocationPicker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useSavedAddresses } from '@/hooks/useSavedAddresses';
 import { useUpdateUserProfile } from '@/hooks/useUser';
 import { uploadProfileImage } from '@/services/storageService';
 import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
@@ -25,6 +27,7 @@ export default function EditProfileScreen() {
   const { colors } = useTheme();
   const { user, userProfile } = useAuth();
   const updateProfileMutation = useUpdateUserProfile();
+  const { data: savedAddresses = [] } = useSavedAddresses(user?.uid || null);
 
   const [formData, setFormData] = useState({
     name: userProfile?.name || user?.displayName || '',
@@ -41,6 +44,7 @@ export default function EditProfileScreen() {
   const [profileImage, setProfileImage] = useState(userProfile?.photoURL || user?.photoURL || '');
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
 
   // Update form data when userProfile loads
   useEffect(() => {
@@ -70,6 +74,33 @@ export default function EditProfileScreen() {
     // Just store the local image URI, don't upload yet
     setLocalImageUri(imageUri);
     setProfileImage(imageUri); // Show preview
+  };
+
+  const handleLocationSelect = (locationData: Partial<{
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    landmark?: string;
+  }>) => {
+    setFormData(prev => ({
+      ...prev,
+      address: locationData.street || prev.address,
+      city: locationData.city || prev.city,
+      state: locationData.state || prev.state,
+      pincode: locationData.pincode || prev.pincode,
+    }));
+  };
+
+  const handleSelectSavedAddress = (savedAddress: any) => {
+    setFormData(prev => ({
+      ...prev,
+      address: savedAddress.street || prev.address,
+      city: savedAddress.city || prev.city,
+      state: savedAddress.state || prev.state,
+      pincode: savedAddress.pincode || prev.pincode,
+    }));
+    setShowSavedAddresses(false);
   };
 
   const handleSave = async () => {
@@ -151,7 +182,7 @@ export default function EditProfileScreen() {
           paddingVertical: 12,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
         }}
       >
         <Pressable 
@@ -192,7 +223,7 @@ export default function EditProfileScreen() {
             />
 
             {/* Basic Information */}
-            <View className="p-5 mb-4 rounded-2xl" style={{ backgroundColor: colors.surface }}>
+            <View className="p-5 mb-4 rounded-2xl border border-gray-200" style={{ backgroundColor: colors.background }}>
               <Text className="text-base font-bold mb-4" style={{ color: colors.text }}>
                 Basic Information
               </Text>
@@ -277,10 +308,109 @@ export default function EditProfileScreen() {
                 Address Information
               </Text>
 
-              <View style={{ gap: 16 }}>
+              {/* Saved Addresses Section */}
+              {savedAddresses.length > 0 && (
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="bookmark" size={18} color={colors.primary} />
+                      <Text style={{ fontSize: 14, fontWeight: '600', marginLeft: 8, color: colors.text }}>
+                        Use Saved Address
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setShowSavedAddresses(!showSavedAddresses)}
+                      className="active:opacity-70"
+                    >
+                      <Ionicons
+                        name={showSavedAddresses ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color={colors.primary}
+                      />
+                    </Pressable>
+                  </View>
+
+                  {showSavedAddresses && (
+                    <View style={{ gap: 8 }}>
+                      {savedAddresses.map((savedAddress) => (
+                        <Pressable
+                          key={savedAddress.id}
+                          onPress={() => handleSelectSavedAddress(savedAddress)}
+                          style={{
+                            padding: 12,
+                            borderRadius: 8,
+                            backgroundColor: colors.background,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                          }}
+                          className="active:opacity-70"
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                            <Ionicons name="location" size={16} color={colors.primary} />
+                            <Text style={{ fontSize: 14, fontWeight: '600', marginLeft: 8, color: colors.text }}>
+                              {savedAddress.label}
+                            </Text>
+                            {savedAddress.isDefault && (
+                              <View
+                                style={{
+                                  marginLeft: 8,
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 2,
+                                  borderRadius: 4,
+                                  backgroundColor: `${colors.success}20`,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10, fontWeight: 'bold', color: colors.success }}>
+                                  DEFAULT
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={{ fontSize: 13, color: colors.text, marginTop: 2 }}>
+                            {savedAddress.street}
+                            {savedAddress.apartment ? `, ${savedAddress.apartment}` : ''}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                            {savedAddress.city}, {savedAddress.state} - {savedAddress.pincode}
+                          </Text>
+                        </Pressable>
+                      ))}
+                      <Pressable
+                        onPress={() => router.push('/addresses')}
+                        style={{
+                          padding: 12,
+                          borderRadius: 8,
+                          backgroundColor: `${colors.primary}10`,
+                          borderWidth: 1,
+                          borderColor: colors.primary,
+                          alignItems: 'center',
+                        }}
+                        className="active:opacity-70"
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                          Manage Saved Addresses →
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Location Picker */}
+              <LocationPicker
+                onLocationSelect={handleLocationSelect}
+                selectedAddress={{
+                  street: formData.address,
+                  city: formData.city,
+                  state: formData.state,
+                  pincode: formData.pincode,
+                }}
+              />
+
+              <View style={{ gap: 16, marginTop: 16 }}>
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>
-                    ADDRESS
+                    ADDRESS LINE 1
                   </Text>
                   <Input
                     placeholder="Enter your address"
@@ -340,7 +470,7 @@ export default function EditProfileScreen() {
             paddingBottom: Platform.OS === 'ios' ? 12 : 16,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,

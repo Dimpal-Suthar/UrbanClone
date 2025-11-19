@@ -2,11 +2,11 @@ import { ConversationCard } from '@/components/chat/ConversationCard';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useConversations, useUnreadCount, useConversationsListRealtime } from '@/hooks/useConversations';
+import { useConversations, useConversationsListRealtime, useUnreadCount } from '@/hooks/useConversations';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
 
 const ChatScreen = observer(() => {
   const router = useRouter();
@@ -56,29 +56,15 @@ const ChatScreen = observer(() => {
     <Container safeArea edges={['top']}>
       {/* Header */}
       <View className="px-6 pt-4 pb-6">
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
-              Messages
+        <View>
+          <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+            Messages
+          </Text>
+          {unreadCount > 0 && (
+            <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+              {unreadCount} unread {unreadCount === 1 ? 'message' : 'messages'}
             </Text>
-            {unreadCount > 0 && (
-              <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                {unreadCount} unread {unreadCount === 1 ? 'message' : 'messages'}
-              </Text>
-            )}
-          </View>
-
-          {/* New Chat Button (optional) */}
-          <Pressable
-            onPress={() => {
-              // Future: Open contact list to start new chat
-              console.log('Start new chat');
-            }}
-            className="w-10 h-10 rounded-full items-center justify-center active:opacity-70"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.text} />
-          </Pressable>
+          )}
         </View>
       </View>
 

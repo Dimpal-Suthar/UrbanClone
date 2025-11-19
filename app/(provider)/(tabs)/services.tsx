@@ -14,7 +14,6 @@ import { useActiveServices } from '@/hooks/useServices';
 import { getStoragePath } from '@/services/storageService';
 import { ProviderServiceOffering, ServiceCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
@@ -354,7 +353,7 @@ const ProviderServicesScreen = observer(() => {
                           resizeMode="cover"
                         />
                       ) : (
-                        <View className="w-full h-full items-center justify-center" style={{ backgroundColor: colors.surface }}>
+                        <View className="w-full h-full items-center justify-center" style={{ backgroundColor: colors.background }}>
                           <Ionicons name="construct" size={24} color={colors.textSecondary} />
                         </View>
                       )}

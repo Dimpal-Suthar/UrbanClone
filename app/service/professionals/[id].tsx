@@ -36,7 +36,7 @@ export default function AllProfessionalsScreen() {
         paddingVertical: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
       }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -59,7 +59,17 @@ export default function AllProfessionalsScreen() {
               </Text>
             </Card>
           ) : (
-            providers.map((provider) => {
+            (() => {
+              // Create a Map to ensure uniqueness by provider ID
+              const uniqueProvidersMap = new Map();
+              providers.forEach((provider) => {
+                if (provider?.id && !uniqueProvidersMap.has(provider.id)) {
+                  uniqueProvidersMap.set(provider.id, provider);
+                }
+              });
+              const uniqueProviders = Array.from(uniqueProvidersMap.values());
+              
+              return uniqueProviders.map((provider, mapIndex) => {
               const offering = provider.offering;
               const providerName = provider.name || provider.displayName || provider.email?.split('@')[0] || 'Professional Provider';
               
@@ -75,7 +85,7 @@ export default function AllProfessionalsScreen() {
               
               return (
                 <Pressable 
-                  key={provider.id}
+                  key={`professional-${provider.id}-${mapIndex}`}
                   onPress={() => {
                     router.push(`/provider/${provider.id}`);
                   }}
@@ -144,8 +154,8 @@ export default function AllProfessionalsScreen() {
                         Work Examples ({offering.images.length})
                       </Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                        {offering.images.map((imageUri, index) => (
-                          <View key={index} style={{ marginRight: 8 }}>
+                        {offering.images.map((imageUri, imgIndex) => (
+                          <View key={`${provider.id}-image-${imgIndex}-${imageUri?.slice(-20) || imgIndex}`} style={{ marginRight: 8 }}>
                             <Image
                               source={{ uri: imageUri }}
                               style={{ 
@@ -163,7 +173,8 @@ export default function AllProfessionalsScreen() {
                 </Card>
                 </Pressable>
               );
-            })
+            });
+            })()
           )}
         </View>
       </ScrollView>

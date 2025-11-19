@@ -1,6 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useState } from 'react';
-import { Text, TextInput, TextInputProps, View } from 'react-native';
+import { Platform, Text, TextInput, TextInputProps, View } from 'react-native';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -37,8 +37,8 @@ export function Input({
           alignItems: 'center',
           borderRadius: 12,
           paddingHorizontal: 16,
-          paddingVertical: 4,
-          backgroundColor: colors.surface,
+          paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+          backgroundColor: colors.background,
           borderWidth: 1.5,
           borderColor,
         }}

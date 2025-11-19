@@ -9,6 +9,7 @@ import {
   addDoc,
   collection,
   doc,
+  DocumentSnapshot,
   getDoc,
   getDocs,
   limit,
@@ -17,12 +18,49 @@ import {
   query,
   serverTimestamp,
   startAfter,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
-  Timestamp,
-  DocumentSnapshot,
 } from 'firebase/firestore';
+
+const convertTypingMap = (typing: any): Conversation['typing'] | undefined => {
+  if (!typing) return undefined;
+
+  const converted: Conversation['typing'] = {};
+
+  Object.entries(typing).forEach(([userId, value]) => {
+    const entry = value as any;
+    if (entry && typeof entry === 'object') {
+      converted[userId] = {
+        isTyping: !!entry.isTyping,
+        updatedAt: entry.updatedAt?.toDate?.() || entry.timestamp?.toDate?.() || undefined,
+      };
+    } else {
+      converted[userId] = {
+        isTyping: Boolean(value),
+      };
+    }
+  });
+
+  return converted;
+};
+
+const buildConversationFromDoc = (id: string, data: any): Conversation => {
+  return {
+    id,
+    ...data,
+    typing: convertTypingMap(data.typing),
+    lastMessage: data.lastMessage
+      ? {
+          ...data.lastMessage,
+          timestamp: data.lastMessage.timestamp?.toDate() || new Date(),
+        }
+      : null,
+    createdAt: data.createdAt?.toDate() || new Date(),
+    updatedAt: data.updatedAt?.toDate() || new Date(),
+  } as Conversation;
+};
 
 /**
  * Get or create a conversation between customer and provider
@@ -70,19 +108,10 @@ export const getOrCreateConversation = async (
         },
       };
 
-      return {
-        id: existingConv.id,
+      return buildConversationFromDoc(existingConv.id, {
         ...data,
         participantsData: updatedParticipantsData,
-        lastMessage: data.lastMessage
-          ? {
-              ...data.lastMessage,
-              timestamp: data.lastMessage.timestamp?.toDate() || new Date(),
-            }
-          : null,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as Conversation;
+      });
     }
 
     // Create new conversation
@@ -106,18 +135,23 @@ export const getOrCreateConversation = async (
         [input.customerId]: 0,
         [input.providerId]: 0,
       },
+      typing: {
+        [input.customerId]: {
+          isTyping: false,
+          updatedAt: Timestamp.now(),
+        },
+        [input.providerId]: {
+          isTyping: false,
+          updatedAt: Timestamp.now(),
+        },
+      },
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
 
     const docRef = await addDoc(conversationsRef, newConversation);
     
-    return {
-      id: docRef.id,
-      ...newConversation,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Conversation;
+    return buildConversationFromDoc(docRef.id, newConversation);
   } catch (error) {
     console.error('Error getting/creating conversation:', error);
     throw error;
@@ -190,19 +224,12 @@ export const getUserConversations = async (
         }
       });
       
-      conversations.push({
-        id: docSnapshot.id,
-        ...data,
-        participantsData: updatedParticipantsData,
-        lastMessage: data.lastMessage
-          ? {
-              ...data.lastMessage,
-              timestamp: data.lastMessage.timestamp?.toDate() || new Date(),
-            }
-          : null,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as Conversation);
+      conversations.push(
+        buildConversationFromDoc(docSnapshot.id, {
+          ...data,
+          participantsData: updatedParticipantsData,
+        })
+      );
     }
 
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
@@ -240,6 +267,7 @@ export const getMessages = async (
       return {
         id: doc.id,
         ...data,
+        imageUrls: data.imageUrls || (data.imageUrl ? [data.imageUrl] : []),
         createdAt: data.createdAt?.toDate() || new Date(),
         readAt: data.readAt?.toDate() || null,
       } as Message;
@@ -279,6 +307,7 @@ export const sendMessage = async (
       text: input.text,
       type: input.type || 'text',
       imageUrl: input.imageUrl || null,
+      imageUrls: input.imageUrls || (input.imageUrl ? [input.imageUrl] : []),
       location: input.location || null,
       isRead: false,
       readAt: null,
@@ -297,13 +326,24 @@ export const sendMessage = async (
 
       batch.update(conversationRef, {
         lastMessage: {
-          text: input.type === 'image' ? '📷 Image' : input.type === 'location' ? '📍 Location' : input.text,
+          text:
+            input.type === 'image'
+              ? input.imageUrls && input.imageUrls.length > 1
+                ? '📷 Photos'
+                : '📷 Image'
+              : input.type === 'location'
+              ? '📍 Location'
+              : input.text,
           senderId,
           timestamp: serverTimestamp(),
           type: input.type || 'text',
         },
         [`unreadCount.${otherUserId}`]: (conversationData.unreadCount?.[otherUserId] || 0) + 1,
-      updatedAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        [`typing.${senderId}`]: {
+          isTyping: false,
+          updatedAt: serverTimestamp(),
+        },
       });
     }
 
@@ -361,6 +401,24 @@ export const markMessagesAsRead = async (
   }
 };
 
+export const setTypingStatus = async (
+  conversationId: string,
+  userId: string,
+  isTyping: boolean
+): Promise<void> => {
+  try {
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await updateDoc(conversationRef, {
+      [`typing.${userId}`]: {
+        isTyping,
+        updatedAt: serverTimestamp(),
+      },
+    });
+  } catch (error) {
+    console.error('Error updating typing status:', error);
+  }
+};
+
 /**
  * Subscribe to conversation updates (real-time)
  */
@@ -375,18 +433,7 @@ export const subscribeToConversation = (
     (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        const conversation: Conversation = {
-          id: snapshot.id,
-          ...data,
-          lastMessage: data.lastMessage
-            ? {
-                ...data.lastMessage,
-                timestamp: data.lastMessage.timestamp?.toDate() || new Date(),
-              }
-            : null,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Conversation;
+        const conversation = buildConversationFromDoc(snapshot.id, data);
         callback(conversation);
       } else {
         callback(null);
@@ -404,25 +451,24 @@ export const subscribeToConversation = (
  */
 export const subscribeToMessages = (
   conversationId: string,
-  callback: (message: Message) => void
+  callback: (message: Message, changeType: 'added' | 'modified' | 'removed') => void
 ): (() => void) => {
   const messagesRef = collection(db, 'conversations', conversationId, 'messages');
-  const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(1));
+  const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(50));
 
   return onSnapshot(
     q,
     (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const data = change.doc.data();
-          const message: Message = {
-            id: change.doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            readAt: data.readAt?.toDate() || null,
-          } as Message;
-          callback(message);
-        }
+        const data = change.doc.data();
+        const message: Message = {
+          id: change.doc.id,
+          ...data,
+          imageUrls: data.imageUrls || (data.imageUrl ? [data.imageUrl] : []),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          readAt: data.readAt?.toDate() || null,
+        } as Message;
+        callback(message, change.type);
       });
     },
     (error) => {
@@ -437,22 +483,23 @@ export const subscribeToMessages = (
  */
 export const subscribeToUserConversations = (
   userId: string,
-  callback: () => void
+  callback: (conversation: Conversation, changeType: 'added' | 'modified' | 'removed') => void
 ): (() => void) => {
   const conversationsRef = collection(db, 'conversations');
-  // Listen to latest updates; any change will trigger a refresh
   const q = query(
     conversationsRef,
     where('participants', 'array-contains', userId),
-    where('updatedAt', '!=', null),
     orderBy('updatedAt', 'desc'),
-    limit(1)
+    limit(30)
   );
 
   return onSnapshot(
     q,
-    () => {
-      callback();
+    (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const conversation = buildConversationFromDoc(change.doc.id, change.doc.data());
+        callback(conversation, change.type);
+      });
     },
     (error) => {
       console.error('Error in user conversations subscription:', error);

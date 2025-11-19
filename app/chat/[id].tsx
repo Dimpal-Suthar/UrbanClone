@@ -6,20 +6,19 @@ import { Container } from '@/components/ui/Container';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useConversationRealtime } from '@/hooks/useConversations';
+import { conversationKeys, useMarkAsRead } from '@/hooks/useConversations';
 import { useUploadImage } from '@/hooks/useImageUpload';
-import { useMarkAsRead } from '@/hooks/useConversations';
 import { useMessages, useMessagesRealtime, useSendMessage } from '@/hooks/useMessages';
-import { conversationKeys } from '@/hooks/useConversations';
+import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
+import { setTypingStatus, subscribeToConversation } from '@/services/chatService';
+import type { Conversation } from '@/types/chat';
+import { makeCall } from '@/utils/callHelpers';
 import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
-import { makeCall } from '@/utils/callHelpers';
 import {
   ActivityIndicator,
   FlatList,
@@ -30,6 +29,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ChatDetailScreen = observer(() => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,12 +42,10 @@ const ChatDetailScreen = observer(() => {
 
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const typingStateRef = useRef(false);
 
   // Get conversation data
-  const conversation = queryClient.getQueryData(conversationKeys.detail(id || ''));
-
-  // Subscribe to conversation updates
-  useConversationRealtime(id || null);
+  const conversation = queryClient.getQueryData<Conversation>(conversationKeys.detail(id || ''));
 
   // Fetch messages with pagination
   const {
@@ -77,7 +75,27 @@ const ChatDetailScreen = observer(() => {
   // This uses TanStack Query caching and shares data across components
   const { data: otherUserProfile, isLoading: isLoadingParticipant } = useUserProfile(otherUserId || null);
   useUserProfileRealtime(otherUserId || null); // Real-time updates
-  
+
+  useEffect(() => {
+    if (!id) return;
+    const unsubscribe = subscribeToConversation(id, (conv) => {
+      if (conv) {
+        queryClient.setQueryData(conversationKeys.detail(id), conv);
+        if (otherUserId) {
+          const typingEntry = conv.typing?.[otherUserId];
+          setIsTyping(!!typingEntry?.isTyping);
+        }
+      } else {
+        setIsTyping(false);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      setIsTyping(false);
+    };
+  }, [id, otherUserId, queryClient]);
+
   // Handle call functionality
   const handleCall = async (phoneNumber?: string) => {
     if (!phoneNumber) {
@@ -119,58 +137,39 @@ const ChatDetailScreen = observer(() => {
     }
   }, [newMessageCount]);
 
-  // Handle sending text message
-  const handleSendText = async (text: string) => {
+  const handleSendMessage = async ({ text, imageUris }: { text: string; imageUris: string[] }) => {
     if (!id || !user?.uid || !otherUserId) return;
 
     try {
+      let uploadedUrls: string[] = [];
+
+      if (imageUris.length > 0) {
+        uploadedUrls = await Promise.all(
+          imageUris.map((uri, idx) => {
+            const path = `chats/${id}/${Date.now()}_${idx}`;
+            return uploadImageMutation.mutateAsync({ imageUri: uri, path });
+          })
+        );
+      }
+
       await sendMessageMutation.mutateAsync({
         input: {
           conversationId: id,
           text,
-          type: 'text',
+          type: uploadedUrls.length > 0 ? 'image' : 'text',
+          imageUrls: uploadedUrls,
+          imageUrl: uploadedUrls[0],
         },
         recipientId: otherUserId,
         recipientName: otherParticipant?.name || 'User',
       });
 
-      // Scroll to bottom
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
-    }
-  };
-
-  // Handle sending image
-  const handleSendImage = async (imageUri: string) => {
-    if (!id || !user?.uid || !otherUserId) return;
-
-    try {
-      // Upload image to Firebase Storage
-      const path = `chats/${id}/${Date.now()}`;
-      const imageUrl = await uploadImageMutation.mutateAsync({ imageUri, path });
-
-      // Send message with image
-      await sendMessageMutation.mutateAsync({
-        input: {
-          conversationId: id,
-          text: '', // Can add caption later
-          type: 'image',
-          imageUrl,
-        },
-        recipientId: otherUserId,
-        recipientName: otherParticipant?.name || 'User',
-      });
-
-      // Scroll to bottom
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 100);
-    } catch (error) {
-      console.error('Error sending image:', error);
-      showFailedMessage('Upload Failed', 'Failed to send image. Please try again.');
+      showFailedMessage('Send Failed', 'Failed to send message. Please try again.');
     }
   };
 
@@ -207,6 +206,26 @@ const ChatDetailScreen = observer(() => {
       </View>
     );
   };
+
+  const handleTypingChange = useCallback(
+    (typing: boolean) => {
+      if (!id || !user?.uid) return;
+      if (typingStateRef.current === typing) return;
+      typingStateRef.current = typing;
+      setTypingStatus(id, user.uid, typing).catch((error) => {
+        console.error('Error updating typing status:', error);
+      });
+    },
+    [id, user?.uid]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingStateRef.current && id && user?.uid) {
+        setTypingStatus(id, user.uid, false).catch(() => {});
+      }
+    };
+  }, [id, user?.uid]);
 
   if (!conversation || isLoadingParticipant) {
     return (
@@ -250,7 +269,7 @@ const ChatDetailScreen = observer(() => {
             paddingVertical: 12,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
           }}
         >
           <Pressable onPress={() => router.back()} className="mr-3 active:opacity-70">
@@ -368,10 +387,10 @@ const ChatDetailScreen = observer(() => {
         {/* Chat Input */}
         <View style={{ paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0) }}>
           <ChatInput
-            onSendText={handleSendText}
-            onSendImage={handleSendImage}
+            onSend={handleSendMessage}
             placeholder={`Message ${otherParticipant.name}...`}
             disabled={sendMessageMutation.isPending || uploadImageMutation.isPending}
+            onTypingChange={handleTypingChange}
           />
         </View>
 

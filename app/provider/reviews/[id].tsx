@@ -117,7 +117,7 @@ export default function ProviderReviewsScreen() {
                     style={{
                       flex: 1,
                       height: 8,
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.background,
                       borderRadius: 4,
                       marginHorizontal: 12,
                       overflow: 'hidden',
@@ -175,7 +175,7 @@ export default function ProviderReviewsScreen() {
                           width: 48,
                           height: 48,
                           borderRadius: 24,
-                          backgroundColor: colors.surface,
+                          backgroundColor: colors.background,
                         }}
                       />
                     ) : (

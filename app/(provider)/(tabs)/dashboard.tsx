@@ -2,17 +2,52 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useProviderBookings } from '@/hooks/useBookings';
 import { useProviderStats } from '@/hooks/useProviderStats';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 const ProviderDashboard = observer(() => {
   const { colors } = useTheme();
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const router = useRouter();
   const { stats, isLoading } = useProviderStats();
+  const {
+    data: providerBookings = [],
+    isLoading: loadingProviderBookings,
+  } = useProviderBookings(user?.uid || null);
+
+  const todaysBookingsList = useMemo(() => {
+    if (!providerBookings?.length) return [];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const toMinutes = (timeString?: string) => {
+      if (!timeString) return Number.MAX_SAFE_INTEGER;
+      const [timePart, modifier] = timeString.split(' ');
+      const [rawHour, rawMinute] = timePart.split(':').map(Number);
+      let hours = rawHour % 12;
+      if (modifier?.toUpperCase() === 'PM') hours += 12;
+      if (modifier?.toUpperCase() === 'AM' && rawHour === 12) hours = 0;
+      return hours * 60 + (rawMinute || 0);
+    };
+
+    return providerBookings
+      .filter((booking) => {
+        const bookingDateStr = (booking.scheduledDate || '').split('T')[0];
+        return (
+          bookingDateStr === todayStr &&
+          !['cancelled', 'rejected'].includes(booking.status)
+        );
+      })
+      .sort((a, b) => toMinutes(a.scheduledTime) - toMinutes(b.scheduledTime));
+  }, [providerBookings]);
+
+  const hasTodaysBookings = todaysBookingsList.length > 0;
+  const scheduleLoading = isLoading || loadingProviderBookings;
 
   return (
     <Container safeArea edges={['top', 'bottom']}>
@@ -114,19 +149,165 @@ const ProviderDashboard = observer(() => {
 
         {/* Today's Schedule */}
         <View className="px-6 mb-6">
-          <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>
-            Today's Schedule
-          </Text>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              Today's Schedule
+            </Text>
+            {hasTodaysBookings && (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(provider)/(tabs)/bookings',
+                    params: { filter: 'today' },
+                  })
+                }
+                className="active:opacity-70"
+              >
+                <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+                  View All
+                </Text>
+              </Pressable>
+            )}
+          </View>
 
-          <Card variant="default" className="items-center py-8">
-            <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-            <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>
-              No bookings for today
-            </Text>
-            <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-              You're all caught up!
-            </Text>
-          </Card>
+          {scheduleLoading ? (
+            <Card variant="default" className="items-center py-8">
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>
+                Loading schedule...
+              </Text>
+            </Card>
+          ) : !hasTodaysBookings ? (
+            <Card variant="default" className="items-center py-8">
+              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
+              <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>
+                No bookings for today
+              </Text>
+              <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                Enjoy your downtime or update your availability.
+              </Text>
+            </Card>
+          ) : (
+            <Card variant="default" className="p-4">
+              <View className="flex-row items-center mb-4">
+                <Ionicons name="calendar" size={20} color={colors.primary} />
+                <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
+                  {stats?.todaysBookings || todaysBookingsList.length}{' '}
+                  {(stats?.todaysBookings || todaysBookingsList.length) === 1
+                    ? 'Booking'
+                    : 'Bookings'}{' '}
+                  Today
+                </Text>
+              </View>
+
+              {todaysBookingsList.slice(0, 3).map((booking, index) => {
+                const scheduleLabel = booking.scheduledTime || booking.scheduledSlot;
+                const locationLabel = booking.address?.city || booking.address?.street || 'On-site service';
+                const statusLabel = booking.status.replace(/-/g, ' ');
+                const isLast = index === Math.min(todaysBookingsList.length, 3) - 1;
+
+                return (
+                  <View
+                    key={booking.id}
+                    style={{
+                      flexDirection: 'row',
+                      marginBottom: isLast ? 0 : 12,
+                    }}
+                  >
+                    <View style={{ alignItems: 'center', marginRight: 12 }}>
+                      <View
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: colors.primary,
+                        }}
+                      />
+                      {!isLast && (
+                        <View
+                          style={{
+                            width: 2,
+                            flex: 1,
+                            backgroundColor: `${colors.primary}40`,
+                            marginTop: 4,
+                          }}
+                        />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          fontWeight: '600',
+                          color: colors.text,
+                        }}
+                      >
+                        {booking.customerName || 'Customer'}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                        {scheduleLabel} • {locationLabel}
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginTop: 6,
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+                          {booking.serviceName}
+                        </Text>
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 12,
+                            backgroundColor: `${colors.primary}15`,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: '600',
+                              color: colors.primary,
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {todaysBookingsList.length > 3 && (
+                <Text
+                  className="mt-3 text-xs font-semibold"
+                  style={{ color: colors.textSecondary }}
+                >
+                  +{todaysBookingsList.length - 3} more scheduled later today
+                </Text>
+              )}
+
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(provider)/(tabs)/bookings',
+                    params: { filter: 'today' },
+                  })
+                }
+                className="mt-4 py-2 rounded-lg active:opacity-70"
+                style={{ backgroundColor: `${colors.primary}10` }}
+              >
+                <Text className="text-sm font-semibold text-center" style={{ color: colors.primary }}>
+                  Manage Today's Bookings →
+                </Text>
+              </Pressable>
+            </Card>
+          )}
         </View>
 
         {/* Quick Actions */}

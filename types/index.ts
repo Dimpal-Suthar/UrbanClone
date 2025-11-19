@@ -1,5 +1,6 @@
 // Export maps types
 export * from './maps';
+export * from './savedAddress';
 
 export type UserRole = 'customer' | 'provider' | 'admin';
 

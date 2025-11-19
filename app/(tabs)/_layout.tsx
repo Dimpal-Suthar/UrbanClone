@@ -1,11 +1,11 @@
-import { Tabs, useRouter, useSegments } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnreadCount } from '@/hooks/useConversations';
-import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import React from 'react';
+import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -26,7 +26,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 60 + insets.bottom,
@@ -62,7 +62,37 @@ export default function TabLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <View style={{ position: 'relative' }}>
+              <Ionicons name="chatbubbles" size={size} color={color} />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    backgroundColor: colors.error,
+                    borderRadius: 10,
+                    minWidth: 20,
+                    height: 20,
+                    paddingHorizontal: 6,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.surface,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 11,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />

@@ -115,7 +115,7 @@ export default function ProviderDetailScreen() {
         paddingVertical: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
       }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -132,11 +132,8 @@ export default function ProviderDetailScreen() {
             marginBottom: 24, 
             padding: 20,
             borderRadius: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 3
+            borderWidth: 1,
+            borderColor: colors.border,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               {/* Provider Profile Image with Initials */}
@@ -304,7 +301,7 @@ export default function ProviderDetailScreen() {
                               width: 40,
                               height: 40,
                               borderRadius: 20,
-                              backgroundColor: colors.surface,
+                              backgroundColor: colors.background,
                             }}
                           />
                         ) : (
