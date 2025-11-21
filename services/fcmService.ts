@@ -2,20 +2,14 @@ import { db } from '@/config/firebase';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 import {
-  addDoc,
-  collection,
-  deleteDoc,
   doc,
   getDoc,
-  getDocs,
-  query,
   serverTimestamp,
   setDoc,
-  updateDoc,
-  where,
+  updateDoc
 } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 /**
  * Configure notification behavior
@@ -211,6 +205,7 @@ export const saveNativePushToken = async (
 
 /**
  * Remove FCM token from Firestore (stored in users collection)
+ * Removes Expo push token from deviceTokens array
  */
 export const removeFCMToken = async (
   userId: string,
@@ -225,16 +220,76 @@ export const removeFCMToken = async (
       const tokens = data.deviceTokens || [];
       const updatedTokens = tokens.filter((t: string) => t !== token);
 
-      // Remove all tokens if list is empty
       await updateDoc(userRef, {
         deviceTokens: updatedTokens.length > 0 ? updatedTokens : [],
         updatedAt: serverTimestamp(),
       });
+      console.log('✅ Expo push token removed from deviceTokens array');
+    } else {
+      console.warn('⚠️ User document does not exist, cannot remove token');
     }
-
-    console.log('✅ FCM token removed successfully');
   } catch (error) {
     console.error('Error removing FCM token:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove all device tokens for current device on logout
+ * Clears both deviceTokens array and fcmToken/apnsToken fields
+ */
+export const removeAllDeviceTokens = async (userId: string): Promise<void> => {
+  try {
+    console.log('🔔 removeAllDeviceTokens called for userId:', userId);
+    const userRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(userRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      console.log('🔔 Current fcmToken in DB:', data.fcmToken);
+      console.log('🔔 Current apnsToken in DB:', data.apnsToken);
+      console.log('🔔 Current deviceTokens:', data.deviceTokens);
+      
+      // Get current device tokens
+      const expoToken = await getExpoPushToken();
+      const nativeToken = await getNativePushToken();
+      
+      console.log('🔔 Current device Expo token:', expoToken);
+      console.log('🔔 Current device native token:', nativeToken);
+      
+      const tokens = data.deviceTokens || [];
+      
+      // Remove current device's Expo token from array
+      const updatedTokens = expoToken 
+        ? tokens.filter((t: string) => t !== expoToken)
+        : tokens;
+
+      // Prepare update - clear all device-specific tokens
+      const update: any = {
+        deviceTokens: updatedTokens.length > 0 ? updatedTokens : [],
+        updatedAt: serverTimestamp(),
+      };
+      
+      // CRITICAL: Always clear fcmToken and apnsToken if they exist
+      // We clear them regardless of match because on logout, we want to remove
+      // all tokens for this device, and if there's a token stored, it's likely from this device
+      if (data.fcmToken) {
+        update.fcmToken = null;
+        console.log('🔔 Clearing fcmToken field on logout:', data.fcmToken);
+      }
+      if (data.apnsToken) {
+        update.apnsToken = null;
+        console.log('🔔 Clearing apnsToken field on logout:', data.apnsToken);
+      }
+
+      console.log('🔔 Updating user document with:', update);
+      await updateDoc(userRef, update);
+      console.log('✅ All device tokens removed successfully on logout');
+    } else {
+      console.warn('⚠️ User document does not exist, cannot remove tokens');
+    }
+  } catch (error) {
+    console.error('❌ Error removing all device tokens:', error);
     throw error;
   }
 };

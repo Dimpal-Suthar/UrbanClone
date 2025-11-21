@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AddressMapPickerProps {
   onAddressSelect: (address: Address, location: Location) => void;
@@ -30,6 +31,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
   initialAddress,
 }) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const searchInputRef = useRef<TextInput>(null);
 
@@ -285,7 +287,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
       </Pressable>
 
       {/* Address Display & Confirm Button */}
-      <View style={[styles.bottomSheet, { backgroundColor: colors.surface }]}>
+      <View style={[styles.bottomSheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom + 20, 20) }]}>
         <View style={styles.handle} />
         
         <View style={styles.addressContainer}>
@@ -435,7 +437,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.15,

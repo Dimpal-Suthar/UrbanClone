@@ -9,7 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AVAILABLE_SERVICES = [
   { id: 'cleaning', name: 'Home Cleaning', icon: 'sparkles' },
@@ -24,12 +25,29 @@ export default function EditProviderDetailsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [experience, setExperience] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Listen to keyboard events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     loadProviderData();
@@ -130,11 +148,21 @@ export default function EditProviderDetailsScreen() {
 
   return (
     <Container>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 pt-16 pb-8">
-          <Pressable onPress={() => router.back()} className="mb-6">
-            <Ionicons name="arrow-back" size={28} color={colors.text} />
-          </Pressable>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          className="flex-1" 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: keyboardVisible ? 400 : Math.max(insets.bottom + 50, 50) }}
+        >
+          <View className="px-6" style={{ paddingTop: Math.max(insets.top + 16, 16) }}>
+            <Pressable onPress={() => router.back()} className="mb-6">
+              <Ionicons name="arrow-back" size={28} color={colors.text} />
+            </Pressable>
 
           <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
             Edit Provider Details
@@ -145,72 +173,74 @@ export default function EditProviderDetailsScreen() {
 
           <Card style={{ marginBottom: 24 }}>
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
-              Which services do you offer?
-            </Text>
+            Which services do you offer?
+          </Text>
             <View className="mt-4">
-              {AVAILABLE_SERVICES.map((service) => (
-                <Pressable
-                  key={service.id}
-                  onPress={() => toggleService(service.id)}
-                  className="mb-3"
-                >
-                  <View
-                    className="flex-row items-center p-4 rounded-xl"
-                    style={{
-                      backgroundColor: selectedServices.includes(service.id)
-                        ? `${colors.primary}20`
+            {AVAILABLE_SERVICES.map((service) => (
+              <Pressable
+                key={service.id}
+                onPress={() => toggleService(service.id)}
+                className="mb-3"
+              >
+                <View
+                  className="flex-row items-center p-4 rounded-xl"
+                  style={{
+                    backgroundColor: selectedServices.includes(service.id) 
+                      ? `${colors.primary}20` 
                         : colors.background,
-                      borderWidth: 2,
-                      borderColor: selectedServices.includes(service.id)
-                        ? colors.primary
-                        : colors.border,
-                    }}
+                    borderWidth: 2,
+                    borderColor: selectedServices.includes(service.id) 
+                      ? colors.primary 
+                      : colors.border,
+                  }}
+                >
+                  <Ionicons 
+                    name={service.icon as any} 
+                    size={24} 
+                    color={selectedServices.includes(service.id) ? colors.primary : colors.text} 
+                  />
+                  <Text 
+                    className="ml-3 flex-1 text-base font-medium"
+                    style={{ color: colors.text }}
                   >
-                    <Ionicons
-                      name={service.icon as any}
-                      size={24}
-                      color={selectedServices.includes(service.id) ? colors.primary : colors.text}
-                    />
-                    <Text
-                      className="ml-3 flex-1 text-base font-medium"
-                      style={{ color: colors.text }}
-                    >
-                      {service.name}
-                    </Text>
-                    {selectedServices.includes(service.id) && (
-                      <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                    )}
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+                    {service.name}
+                  </Text>
+                  {selectedServices.includes(service.id) && (
+                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                  )}
+                </View>
+              </Pressable>
+            ))}
+          </View>
           </Card>
 
           <Card style={{ marginBottom: 24 }}>
-            <Input
-              label="Years of Experience"
-              leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
-              placeholder="e.g., 5"
-              value={experience}
+          <Input
+            label="Years of Experience"
+            required
+            leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
+            placeholder="e.g., 5"
+            value={experience}
               onChangeText={handleExperienceChange}
-              keyboardType="number-pad"
+            keyboardType="number-pad"
               maxLength={2}
             />
           </Card>
 
           <Card style={{ marginBottom: 32 }}>
-            <Input
+              <Input
               label="About You"
-              placeholder="Tell customers about your skills and experience..."
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
+              required
+                placeholder="Tell customers about your skills and experience..."
+                value={bio}
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
               style={{ minHeight: 120, textAlignVertical: 'top' }}
               maxLength={500}
-            />
+              />
           </Card>
- 
+
           {/* Submit Button */}
           <Button
             title="Update Details"
@@ -220,8 +250,9 @@ export default function EditProviderDetailsScreen() {
             variant="primary"
             size="lg"
           />
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Container>
   );
 }

@@ -125,6 +125,7 @@ export interface CategoryInfo {
   id: ServiceCategory;
   name: string;
   icon: string;
+  image?: any; // Optional image (require() result) for category
   color: string;
   description: string;
 }

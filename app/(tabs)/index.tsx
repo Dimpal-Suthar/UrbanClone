@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HomeScreen = observer(() => {
@@ -25,6 +25,7 @@ const HomeScreen = observer(() => {
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   
   // Fetch active services
   const { data: services = [], isLoading } = useActiveServices();
@@ -32,6 +33,10 @@ const HomeScreen = observer(() => {
   // Fetch saved addresses
   const { data: savedAddresses = [], isLoading: loadingAddresses } = useSavedAddresses(user?.uid || null);
   const createSavedAddressMutation = useCreateSavedAddress();
+
+  const handleImageLoad = (categoryId: string) => {
+    setLoadedImages((prev) => new Set(prev).add(categoryId));
+  };
 
   // Debug: Log saved addresses
   React.useEffect(() => {
@@ -183,7 +188,7 @@ const HomeScreen = observer(() => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24 }}
-            className="gap-3"
+            className="gap-2"
           >
             {SERVICE_CATEGORIES.map((category) => (
               <Pressable
@@ -192,26 +197,111 @@ const HomeScreen = observer(() => {
                 className="mr-3 active:opacity-70"
               >
                 <View
-                  className="w-24 rounded-2xl p-4 items-center"
                   style={{
-                    backgroundColor: selectedCategory === category.id ? `${category.color}20` : colors.surface,
-                    borderWidth: 2,
+                    width: 165,
+                    height: 165,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    borderWidth: 1,
                     borderColor: selectedCategory === category.id ? category.color : 'transparent',
                   }}
                 >
-                  <View
-                    className="w-14 h-14 rounded-full items-center justify-center mb-2"
-                    style={{ backgroundColor: `${category.color}20` }}
-                  >
-                    <Ionicons name={category.icon as any} size={28} color={category.color} />
-                  </View>
-                  <Text
-                    className="text-xs font-semibold text-center"
-                    style={{ color: colors.text }}
-                    numberOfLines={2}
-                  >
-                    {category.name}
-                  </Text>
+                  {category.image ? (
+                    <View style={{ position: 'relative', width: '100%', height: '100%'}}>
+                      {/* Skeleton Loader */}
+                      {!loadedImages.has(category.id) && (
+                        <View
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: colors.surface,
+                            borderRadius: 16,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <ActivityIndicator size="small" color={category.color} />
+                        </View>
+                      )}
+                      {/* Image */}
+                      <Image
+                        source={category.image}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          resizeMode: 'cover',
+                          opacity: loadedImages.has(category.id) ? 1 : 0,
+                        }}
+                        onLoad={() => handleImageLoad(category.id)}
+                      />
+                      {/* Overlay for better text readability */}
+                      {loadedImages.has(category.id) && (
+                        <>
+                          <View
+                            style={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                              paddingVertical: 10,
+                              paddingHorizontal: 6,
+                              borderBottomLeftRadius: 16,
+                              borderBottomRightRadius: 16,
+                            }}
+                          >
+                            <Text
+                              className="text-sm font-semibold text-center text-white"
+                              numberOfLines={2}
+                            >
+                              {category.name}
+                            </Text>
+                          </View>
+                          {/* Selection indicator */}
+                          {selectedCategory === category.id && (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                borderWidth: 1,
+                                borderColor: category.color,
+                                backgroundColor: `${category.color}20`,
+                                borderRadius: 16,
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </View>
+                  ) : (
+                    // Fallback to icon if image not available
+                    <View
+                      className="p-4 items-center"
+                      style={{
+                        backgroundColor: selectedCategory === category.id ? `${category.color}20` : colors.surface,
+                      }}
+                    >
+                      <View
+                        className="w-14 h-14 rounded-full items-center justify-center mb-2"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        <Ionicons name={category.icon as any} size={28} color={category.color} />
+                      </View>
+                      <Text
+                        className="text-xs font-semibold text-center"
+                        style={{ color: colors.text }}
+                        numberOfLines={2}
+                      >
+                        {category.name}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </Pressable>
             ))}

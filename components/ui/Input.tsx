@@ -8,6 +8,7 @@ interface InputProps extends TextInputProps {
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  required?: boolean;
 }
 
 export function Input({ 
@@ -16,6 +17,7 @@ export function Input({
   helperText,
   leftIcon, 
   rightIcon,
+  required,
   style,
   ...props 
 }: InputProps) {
@@ -27,9 +29,14 @@ export function Input({
   return (
     <View style={{ marginBottom: 16 }}>
       {label && (
-        <Text style={{ marginBottom: 8, fontSize: 14, fontWeight: '500', color: colors.text }}>
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>
+            {label}
+          </Text>
+          {required && (
+            <Text style={{ fontSize: 14, color: colors.error, marginLeft: 4 }}>*</Text>
+          )}
+        </View>
       )}
       <View
         style={{

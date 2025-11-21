@@ -158,27 +158,16 @@ const AdminSettings = observer(() => {
             Actions
           </Text>
 
-          <Pressable className="active:opacity-70">
+          <Pressable
+            onPress={() => router.push('/(admin)/edit-profile')}
+            className="active:opacity-70"
+          >
             <Card variant="default" className="mb-3">
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center flex-1">
-                  <Ionicons name="document-text-outline" size={22} color={colors.text} />
+                  <Ionicons name="person-outline" size={22} color={colors.text} />
                   <Text className="ml-3 text-base" style={{ color: colors.text }}>
-                    Platform Logs
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </View>
-            </Card>
-          </Pressable>
-
-          <Pressable className="active:opacity-70">
-            <Card variant="default" className="mb-3">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1">
-                  <Ionicons name="settings-outline" size={22} color={colors.text} />
-                  <Text className="ml-3 text-base" style={{ color: colors.text }}>
-                    Platform Settings
+                    Edit Profile
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />

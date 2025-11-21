@@ -1,3 +1,4 @@
+import { BookingListCard } from '@/components/BookingListCard';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,7 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { BookingListCard } from '@/components/BookingListCard';
 
 const BOOKING_TABS = ['Upcoming', 'Completed', 'Cancelled'];
 
@@ -88,7 +88,7 @@ export default function BookingsScreen() {
   };
 
   return (
-    <Container safeArea edges={['top', 'bottom']}>
+    <Container safeArea edges={['top']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-4 pb-4">

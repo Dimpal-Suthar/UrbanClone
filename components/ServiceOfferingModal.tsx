@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { ImagePickerBottomSheet } from '@/components/ui/ImagePickerBottomSheet';
 import { Input } from '@/components/ui/Input';
+import { getCategoryColor, getCategoryIcon } from '@/constants/ServiceCategories';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUploadImages } from '@/hooks/useImageUpload';
 import { useActiveServices } from '@/hooks/useServices';
@@ -8,7 +9,8 @@ import { ProviderServiceOffering } from '@/types';
 import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ServiceOfferingModalProps {
   visible: boolean;
@@ -33,6 +35,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const { data: allServices = [] } = useActiveServices();
+  const insets = useSafeAreaInsets();
   
   const [selectedServiceId, setSelectedServiceId] = useState(offering?.serviceId || '');
   const [customPrice, setCustomPrice] = useState(offering?.customPrice?.toString() || '');
@@ -42,8 +45,24 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
   const uploadImagesMutation = useUploadImages();
+
+  // Listen to keyboard events
+  React.useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Update form when offering changes
   React.useEffect(() => {
@@ -61,6 +80,19 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
       setImages([]);
     }
   }, [offering]);
+
+  // Reset form when modal closes and it's not editing
+  React.useEffect(() => {
+    if (!visible && !offering) {
+      setSelectedServiceId('');
+      setCustomPrice('');
+      setDescription('');
+      setExperience('');
+      setImages([]);
+      setShowServicePicker(false);
+      setShowImagePicker(false);
+    }
+  }, [visible, offering]);
 
   const selectedService = allServices.find(s => s.id === selectedServiceId);
 
@@ -95,6 +127,16 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
         experience: parseInt(experience),
         images: images.length > 0 ? images : undefined,
       });
+      
+      // Reset form if creating new offering (not editing)
+      if (!offering) {
+        setSelectedServiceId('');
+        setCustomPrice('');
+        setDescription('');
+        setExperience('');
+        setImages([]);
+      }
+      
       onClose();
     } catch (error) {
       console.error('Submit error:', error);
@@ -105,7 +147,7 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         {/* Header */}
-        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.background }}>
+        <View className="px-6 pb-6" style={{ paddingTop: Math.max(insets.top + 16, 48), backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between mb-4">
             <View>
               <Text className="text-2xl font-bold" style={{ color: colors.text }}>
@@ -125,7 +167,12 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
           </View>
         </View>
 
-        <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className="flex-1 px-6 pt-6" 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: keyboardVisible ? 400 : 50 }}
+        >
           {/* Service Selection */}
           <View className="mb-6">
             <Text className="text-base font-semibold mb-3" style={{ color: colors.text }}>
@@ -145,9 +192,9 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
                   <>
                     <View 
                       className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                      style={{ backgroundColor: `${colors.primary}20` }}
+                      style={{ backgroundColor: `${getCategoryColor(selectedService.category)}20` }}
                     >
-                      <Ionicons name="construct" size={20} color={colors.primary} />
+                      <Ionicons name={getCategoryIcon(selectedService.category) as any} size={20} color={getCategoryColor(selectedService.category)} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-base font-medium" style={{ color: colors.text }}>
@@ -194,9 +241,9 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
                   >
                     <View 
                       className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                      style={{ backgroundColor: `${colors.primary}20` }}
+                      style={{ backgroundColor: `${getCategoryColor(service.category)}20` }}
                     >
-                      <Ionicons name="construct" size={20} color={colors.primary} />
+                      <Ionicons name={getCategoryIcon(service.category) as any} size={20} color={getCategoryColor(service.category)} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-base font-medium" style={{ color: colors.text }}>
@@ -336,40 +383,40 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
           </View>
 
           <View className="h-6" />
+          
+          {/* Footer */}
+          <View className="px-6 pt-6" style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom + 8, 8) }}>
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={onClose}
+                className="flex-1 py-4 rounded-2xl items-center justify-center active:opacity-70"
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Button
+                title={offering ? 'Update' : 'Create'}
+                onPress={handleSubmit}
+                disabled={isLoading}
+                loading={isLoading}
+                variant="primary"
+                size="lg"
+                className="flex-1"
+              />
+            </View>
+          </View>
         </ScrollView>
+      </View>
 
-        {/* Footer */}
-        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <View className="flex-row gap-3">
-            <Pressable
-              onPress={onClose}
-              className="flex-1 py-4 rounded-2xl items-center justify-center active:opacity-70"
-              style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}
-            >
-              <Text className="text-lg font-semibold" style={{ color: colors.text }}>
-                Cancel
-              </Text>
-            </Pressable>
-            <Button
-              title={offering ? 'Update Offering' : 'Create Offering'}
-              onPress={handleSubmit}
-              disabled={isLoading}
-              loading={isLoading}
-              variant="primary"
-              size="lg"
-              className="flex-1"
-            />
-          </View>
-          </View>
-        </View>
-
-        {/* Image Picker Bottom Sheet */}
-        <ImagePickerBottomSheet
-          visible={showImagePicker}
-          onClose={() => setShowImagePicker(false)}
-          onImageSelected={handleImageSelected}
-          title="Add Work Example"
-        />
-      </Modal>
-    );
-  };
+      {/* Image Picker Bottom Sheet */}
+      <ImagePickerBottomSheet
+        visible={showImagePicker}
+        onClose={() => setShowImagePicker(false)}
+        onImageSelected={handleImageSelected}
+        title="Add Work Example"
+      />
+    </Modal>
+  );
+};

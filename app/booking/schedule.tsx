@@ -12,12 +12,12 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Platform,
   Pressable,
   ScrollView,
   Text,
-  View,
+  View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // All possible time slots (will be filtered based on provider availability)
 const ALL_TIME_SLOTS: TimeSlot[] = [
@@ -39,6 +39,7 @@ export default function ScheduleBookingScreen() {
   const { serviceId, providerId: preselectedProviderId } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [selectedProviderId, setSelectedProviderId] = useState<string>(
     (preselectedProviderId as string) || ''
@@ -496,7 +497,7 @@ export default function ScheduleBookingScreen() {
       <View
         className="px-5 pt-4 border-t"
         style={{
-          paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+          paddingBottom: Math.max(insets.bottom + 16, 16),
           borderTopColor: colors.border,
           backgroundColor: colors.background,
           shadowColor: '#000',

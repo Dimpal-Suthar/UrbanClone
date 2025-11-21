@@ -10,6 +10,14 @@ module.exports = {
   expo: {
     ...appConfig.expo,
     
+    // EAS Update configuration
+    updates: {
+      url: "https://u.expo.dev/bb51b59e-8081-4d34-a772-0941054818a5"
+    },
+    runtimeVersion: {
+      policy: "appVersion"
+    },
+    
     // iOS Google Maps configuration (CRITICAL for native module)
     ios: {
       ...appConfig.expo.ios,
@@ -22,9 +30,7 @@ module.exports = {
     android: {
       ...appConfig.expo.android,
       config: {
-        googleMaps: {
-          apiKey: googleMapsApiKey
-        }
+        googleMapsApiKey: googleMapsApiKey
       },
       permissions: [
         ...(appConfig.expo.android.permissions || []),
@@ -33,13 +39,29 @@ module.exports = {
       ]
     },
     
-    // Add react-native-maps plugin for proper iOS configuration
+    // Add react-native-maps plugin and update expo-build-properties to fix OutOfMemoryError
     plugins: [
-      ...(appConfig.expo.plugins || []),
+      ...(appConfig.expo.plugins || []).map(plugin => {
+        // Update existing expo-build-properties plugin with memory settings
+        if (Array.isArray(plugin) && plugin[0] === 'expo-build-properties') {
+          return [
+            'expo-build-properties',
+            {
+              ...plugin[1],
+              android: {
+                ...(plugin[1].android || {}),
+                enableProguardInReleaseBuilds: false
+              }
+            }
+          ];
+        }
+        return plugin;
+      }),
       [
         'react-native-maps',
         {
           iosGoogleMapsApiKey: googleMapsApiKey,
+          androidGoogleMapsApiKey: googleMapsApiKey, // CRITICAL: This injects API key into AndroidManifest.xml
         },
       ],
     ],

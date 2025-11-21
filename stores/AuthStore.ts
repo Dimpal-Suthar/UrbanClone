@@ -2,7 +2,7 @@ import { auth, db } from '@/config/firebase';
 import authService, { UserProfile } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, Unsubscribe } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, Unsubscribe } from 'firebase/firestore';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 export class AuthStore {
@@ -153,6 +153,7 @@ export class AuthStore {
 
   /**
    * Create default profile if it doesn't exist
+   * CRITICAL: Uses merge: true to never overwrite existing data
    */
   private async createDefaultProfile(uid: string): Promise<void> {
     try {
@@ -167,30 +168,68 @@ export class AuthStore {
         return;
       }
       
-      const defaultProfile: UserProfile = {
-        uid,
-        role: 'customer', // CRITICAL: Always set role
-        email: user.email || '',
-        displayName: user.displayName || '',
-        authMethod: user.phoneNumber ? 'phone' : 'email',
-        emailVerified: user.emailVerified || false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // CRITICAL: Check if document already exists before creating
+      const userRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(userRef);
       
-      await setDoc(doc(db, 'users', uid), defaultProfile);
-      
-      runInAction(() => {
-        this.userProfile = defaultProfile;
-        this.loading = false; // CRITICAL: Stop loading on success
-      });
-      
-      console.log('✅ Default profile created successfully - Role:', defaultProfile.role);
+      // If document exists, don't overwrite it - just update missing fields
+      if (docSnap.exists()) {
+        const existingData = docSnap.data() as UserProfile;
+        console.log('⚠️ User document already exists, using merge to preserve existing data');
+        console.log('📋 Existing role:', existingData.role);
+        
+        // Only set default role if it doesn't exist
+        const defaultProfile: Partial<UserProfile> = {
+          uid,
+          email: existingData.email || user.email || '',
+          displayName: existingData.displayName || user.displayName || '',
+          authMethod: existingData.authMethod || (user.phoneNumber ? 'phone' : 'email'),
+          emailVerified: existingData.emailVerified ?? user.emailVerified ?? false,
+          updatedAt: new Date(),
+        };
+        
+        // CRITICAL: Only set role if it doesn't exist in existing document
+        if (!existingData.role) {
+          defaultProfile.role = 'customer';
+          console.log('⚠️ WARNING: Setting default role to customer (role was missing)');
+        } else {
+          console.log('✅ Preserving existing role:', existingData.role);
+        }
+        
+        // Use merge: true to preserve all existing fields
+        await setDoc(userRef, defaultProfile, { merge: true });
+        
+        runInAction(() => {
+          this.userProfile = { ...existingData, ...defaultProfile } as UserProfile;
+          this.loading = false;
+        });
+      } else {
+        // Document doesn't exist - create new one
+        const defaultProfile: UserProfile = {
+          uid,
+          role: 'customer', // Only set default role for new users
+          email: user.email || '',
+          displayName: user.displayName || '',
+          authMethod: user.phoneNumber ? 'phone' : 'email',
+          emailVerified: user.emailVerified || false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        // Use merge: true even for new documents to be safe
+        await setDoc(userRef, defaultProfile, { merge: true });
+        
+        runInAction(() => {
+          this.userProfile = defaultProfile;
+          this.loading = false;
+        });
+        
+        console.log('✅ New default profile created - Role:', defaultProfile.role);
+      }
     } catch (error: any) {
       console.error('❌ Error creating default profile:', error);
       
       // CRITICAL: ALWAYS stop loading, even if creation fails
-      // This prevents infinite "Loading profile..." loop
       runInAction(() => {
         this.loading = false;
       });

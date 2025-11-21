@@ -1,38 +1,52 @@
 {
   "cli": {
-    "version": ">= 5.2.0"
+    "version": ">= 5.2.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
-      }
+        "EAS_NO_FROZEN_LOCKFILE": "1"
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
-      }
+        "YARN_ENABLE_IMMUTABLE_INSTALLS": "false",
+        "EAS_NO_FROZEN_LOCKFILE": "1"
+      },
+      "channel": "preview"
     },
     "production": {
-      "env": {
-        "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
-      },
+      "distribution": "store",
       "android": {
         "buildType": "apk"
       },
       "ios": {
-        "bundleIdentifier": "com.urbanclone.app"
-      }
+        "buildConfiguration": "Release"
+      },
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "YARN_ENABLE_IMMUTABLE_INSTALLS": "false",
+        "EAS_NO_FROZEN_LOCKFILE": "1"
+      },
+      "channel": "production"
     }
   },
   "submit": {
     "production": {}
   }
 }
-

@@ -23,7 +23,9 @@ const ProviderDashboard = observer(() => {
   const todaysBookingsList = useMemo(() => {
     if (!providerBookings?.length) return [];
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
 
     const toMinutes = (timeString?: string) => {
       if (!timeString) return Number.MAX_SAFE_INTEGER;
@@ -35,9 +37,43 @@ const ProviderDashboard = observer(() => {
       return hours * 60 + (rawMinute || 0);
     };
 
+    const getBookingDateStr = (scheduledDate: any): string => {
+      if (!scheduledDate) return '';
+      
+      // Handle Firestore Timestamp
+      if (scheduledDate?.toDate) {
+        return scheduledDate.toDate().toISOString().split('T')[0];
+      }
+      
+      // Handle Date object
+      if (scheduledDate instanceof Date) {
+        return scheduledDate.toISOString().split('T')[0];
+      }
+      
+      // Handle string (ISO format or date string)
+      if (typeof scheduledDate === 'string') {
+        // If it's already in YYYY-MM-DD format
+        if (scheduledDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return scheduledDate;
+        }
+        // If it's ISO string, extract date part
+        if (scheduledDate.includes('T')) {
+          return scheduledDate.split('T')[0];
+        }
+        // Try to parse as date
+        try {
+          return new Date(scheduledDate).toISOString().split('T')[0];
+        } catch {
+          return '';
+        }
+      }
+      
+      return '';
+    };
+
     return providerBookings
       .filter((booking) => {
-        const bookingDateStr = (booking.scheduledDate || '').split('T')[0];
+        const bookingDateStr = getBookingDateStr(booking.scheduledDate);
         return (
           bookingDateStr === todayStr &&
           !['cancelled', 'rejected'].includes(booking.status)
@@ -50,7 +86,7 @@ const ProviderDashboard = observer(() => {
   const scheduleLoading = isLoading || loadingProviderBookings;
 
   return (
-    <Container safeArea edges={['top', 'bottom']}>
+    <Container safeArea edges={['top']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-4 pb-6">
@@ -94,7 +130,10 @@ const ProviderDashboard = observer(() => {
 
             <Pressable 
               className="flex-1 active:opacity-70"
-              onPress={() => router.push('/(provider)/(tabs)/bookings')}
+              onPress={() => router.push({
+                pathname: '/(provider)/(tabs)/bookings',
+                params: { filter: 'completed' },
+              })}
             >
               <Card variant="elevated" className="p-4">
                 <Ionicons name="checkmark-circle-outline" size={28} color={colors.success} />
@@ -130,7 +169,11 @@ const ProviderDashboard = observer(() => {
 
             <Pressable 
               className="flex-1 active:opacity-70"
-              onPress={() => router.push('/(provider)/(tabs)/profile')}
+              onPress={() => {
+                if (user?.uid) {
+                  router.push(`/provider/reviews/${user.uid}`);
+                }
+              }}
             >
               <Card variant="elevated" className="p-4">
                 <Ionicons name="star" size={28} color="#FFD700" />

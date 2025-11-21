@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import React from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Component to display provider rating with dynamic data
 const ProviderRatingCard = ({ providerId }: { providerId: string }) => {
@@ -63,6 +64,7 @@ export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   console.log('🔍 ServiceDetailScreen - id:', id);
   console.log('🔍 ServiceDetailScreen - id type:', typeof id);
@@ -600,7 +602,8 @@ export default function ServiceDetailScreen() {
       {providers.length > 0 ? (
         <View style={{ 
           paddingHorizontal: 24, 
-          paddingVertical: 16, 
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom + 16, 16),
           borderTopWidth: 1, 
           borderTopColor: colors.border,
           backgroundColor: colors.background,
@@ -621,7 +624,8 @@ export default function ServiceDetailScreen() {
       ) : (
         <View style={{ 
           paddingHorizontal: 24, 
-          paddingVertical: 16, 
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom + 16, 16),
           borderTopWidth: 1, 
           borderTopColor: colors.border,
           backgroundColor: colors.background,

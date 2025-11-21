@@ -77,7 +77,7 @@ const SplashScreen = observer(() => {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, marginTop: 32, alignItems: 'center' }}>
-          <Text className="text-4xl font-bold text-white mb-2">UrbanClone</Text>
+          <Text className="text-4xl font-bold text-white mb-2">Service Squad</Text>
           <Text className="text-lg text-white/80 text-center mb-4">
             Home Services at Your Doorstep
           </Text>

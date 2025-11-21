@@ -100,6 +100,7 @@ class AuthService {
         return userDoc.data() as UserProfile;
       } else {
         // Create profile if doesn't exist
+        // CRITICAL: Use merge: true to prevent overwriting if document was created by another process
         const newUser: UserProfile = {
           uid: user.uid,
           role: 'customer',  // Default role
@@ -111,7 +112,7 @@ class AuthService {
           updatedAt: serverTimestamp(),
         };
         
-        await setDoc(doc(db, 'users', user.uid), newUser);
+        await setDoc(doc(db, 'users', user.uid), newUser, { merge: true });
         return newUser;
       }
     } catch (error: any) {
@@ -179,19 +180,15 @@ class AuthService {
    */
   async signOut(): Promise<void> {
     try {
-      // Remove device token before signing out
+      // Remove all device tokens before signing out
       if (auth.currentUser?.uid) {
-        const { removeFCMToken } = await import('@/services/fcmService');
-        const { getExpoPushToken } = await import('@/services/fcmService');
+        const { removeAllDeviceTokens } = await import('@/services/fcmService');
         
         try {
-          const currentToken = await getExpoPushToken();
-          if (currentToken) {
-            await removeFCMToken(auth.currentUser.uid, currentToken);
-            console.log('✅ Device token removed on logout');
-          }
+          await removeAllDeviceTokens(auth.currentUser.uid);
+          console.log('✅ All device tokens removed on logout');
         } catch (tokenError) {
-          console.warn('Could not remove device token:', tokenError);
+          console.warn('Could not remove device tokens:', tokenError);
         }
       }
       

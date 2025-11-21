@@ -26,6 +26,7 @@
     "expo-notifications": "~0.32.12",
     "expo-router": "latest",
     "expo-status-bar": "~3.0.8",
+    "expo-updates": "~29.0.12",
     "firebase": "latest",
     "formik": "^2.4.6",
     "geolib": "^3.3.4",

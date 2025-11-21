@@ -14,12 +14,12 @@ import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   Text,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConfirmBookingScreen() {
   const {
@@ -41,6 +41,7 @@ export default function ConfirmBookingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user, userProfile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: service } = useService(serviceId as string);
@@ -404,7 +405,7 @@ export default function ConfirmBookingScreen() {
         style={{
           paddingHorizontal: 20,
           paddingTop: 16,
-          paddingBottom: Platform.OS === 'ios' ? 12 : 16,
+          paddingBottom: Math.max(insets.bottom + 16, 16),
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.background,

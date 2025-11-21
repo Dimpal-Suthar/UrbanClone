@@ -1,3 +1,4 @@
+import { BookingListCard } from '@/components/BookingListCard';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -9,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { BookingListCard } from '@/components/BookingListCard';
 
 type BookingTab = 'new' | 'upcoming' | 'completed' | 'cancelled';
 
@@ -114,7 +114,7 @@ const ProviderBookingsScreen = observer(() => {
   };
 
   return (
-    <Container safeArea edges={['top', 'bottom']}>
+    <Container safeArea edges={['top']}>
         {/* Header */}
         <View className="px-6 pt-4 pb-4">
           <Text className="text-2xl font-bold" style={{ color: colors.text }}>

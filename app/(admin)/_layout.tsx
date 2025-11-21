@@ -72,6 +72,12 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />
         }} 
       />
+      <Tabs.Screen 
+        name="edit-profile" 
+        options={{
+          href: null, // Hide from tab bar - it's a screen, not a tab
+        }} 
+      />
     </Tabs>
   );
 }

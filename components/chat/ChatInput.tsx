@@ -3,7 +3,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ChatInputProps {
   onSend: (payload: { text: string; imageUris: string[] }) => Promise<void> | void;
@@ -21,12 +22,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onTypingChange,
 }) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
   const isTypingRef = useRef(false);
+  const textInputRef = useRef<TextInput>(null);
 
   const notifyTyping = (value: boolean) => {
     if (onTypingChange && isTypingRef.current !== value) {
@@ -84,15 +87,39 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     const previousText = text;
     const previousImages = [...selectedImages];
+    
+    // Clear input immediately but keep keyboard open
     setText('');
     setSelectedImages([]);
+    
+    // Keep input focused throughout the entire process
+    // Don't call focus() multiple times - it causes keyboard to flicker
+    const inputRef = textInputRef.current;
+    
     try {
       setIsSending(true);
+      // Keep focus during sending - don't let it blur
+      if (inputRef) {
+        inputRef.focus();
+      }
       await onSend(payload);
+      // After sending, ensure focus is maintained without causing flicker
+      // Use a small delay to ensure the focus happens after state updates
+      setTimeout(() => {
+        if (inputRef && inputRef.isFocused() === false) {
+          inputRef.focus();
+        }
+      }, 50);
     } catch (error) {
       setText(previousText);
       setSelectedImages(previousImages);
       console.error('Failed to send chat message:', error);
+      // Refocus input on error
+      setTimeout(() => {
+        if (inputRef) {
+          inputRef.focus();
+        }
+      }, 50);
     } finally {
       setIsSending(false);
       if (!payload.text && payload.imageUris.length === 0) {
@@ -205,7 +232,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             backgroundColor: colors.background,
             borderRadius: 20,
             paddingHorizontal: 16,
-            paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+            paddingVertical: 8,
             borderWidth: 1,
             borderColor: colors.border,
             flexDirection: 'row',
@@ -213,6 +240,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           }}
         >
           <TextInput
+            ref={textInputRef}
             value={text}
             onChangeText={handleTextChange}
             placeholder={placeholder}
@@ -224,10 +252,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               maxHeight: 120,
             }}
             multiline
-            editable={!disabled && !isSending}
+            editable={!disabled}
             onSubmitEditing={handleSend}
             returnKeyType="send"
             maxLength={500}
+            blurOnSubmit={false}
+            onBlur={() => {
+              // Prevent blur during sending to keep keyboard open
+              if (isSending && textInputRef.current) {
+                setTimeout(() => {
+                  textInputRef.current?.focus();
+                }, 10);
+              }
+            }}
           />
         </View>
 

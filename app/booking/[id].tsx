@@ -32,12 +32,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BookingDetailScreen() {
   const { id, fromBookingFlow } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   
   // Handle back button - if coming from booking flow, go to bookings tab
   const handleBackPress = () => {
@@ -590,7 +592,8 @@ export default function BookingDetailScreen() {
         <View
           style={{
             paddingHorizontal: 24,
-            paddingVertical: 16,
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom + 16, 16),
             borderTopWidth: 1,
             borderTopColor: colors.border,
             backgroundColor: colors.background,

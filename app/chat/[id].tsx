@@ -24,10 +24,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   Text,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -128,14 +127,6 @@ const ChatDetailScreen = observer(() => {
     }, [id, user?.uid])
   );
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (newMessageCount > 0 && messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 100);
-    }
-  }, [newMessageCount]);
 
   const handleSendMessage = async ({ text, imageUris }: { text: string; imageUris: string[] }) => {
     if (!id || !user?.uid || !otherUserId) return;
@@ -227,6 +218,16 @@ const ChatDetailScreen = observer(() => {
     };
   }, [id, user?.uid]);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0 && flatListRef.current) {
+      // Small delay to ensure message is rendered
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    }
+  }, [messages.length]);
+
   if (!conversation || isLoadingParticipant) {
     return (
       <Container safeArea edges={['top']}>
@@ -254,11 +255,11 @@ const ChatDetailScreen = observer(() => {
   }
 
   return (
-    <Container safeArea edges={['top']}>
+    <Container safeArea edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={'padding'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View
@@ -376,8 +377,11 @@ const ChatDetailScreen = observer(() => {
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             ListFooterComponent={renderFooter}
-            contentContainerStyle={{ paddingTop: 16 }}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+            style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
           />
         )}
 
@@ -385,14 +389,12 @@ const ChatDetailScreen = observer(() => {
         {isTyping && <TypingIndicator userName={otherParticipant.name} />}
 
         {/* Chat Input */}
-        <View style={{ paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0) }}>
-          <ChatInput
-            onSend={handleSendMessage}
-            placeholder={`Message ${otherParticipant.name}...`}
-            disabled={sendMessageMutation.isPending || uploadImageMutation.isPending}
-            onTypingChange={handleTypingChange}
-          />
-        </View>
+        <ChatInput
+          onSend={handleSendMessage}
+          placeholder={`Message ${otherParticipant.name}...`}
+          disabled={false}
+          onTypingChange={handleTypingChange}
+        />
 
         {/* Image Viewer Modal */}
         {selectedImage && (

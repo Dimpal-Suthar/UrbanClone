@@ -13,7 +13,8 @@ import { showFailedMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AdminServicesScreen = observer(() => {
   const { colors } = useTheme();
@@ -296,6 +297,7 @@ const ServiceFormModal = ({
   uploadImageMutation,
 }: ServiceFormModalProps) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(service?.name || '');
   const [description, setDescription] = useState(service?.description || '');
   const [basePrice, setBasePrice] = useState(service?.basePrice.toString() || '');
@@ -307,6 +309,22 @@ const ServiceFormModal = ({
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [whatsIncluded, setWhatsIncluded] = useState<string[]>(service?.whatsIncluded || []);
   const [newIncludedItem, setNewIncludedItem] = useState('');
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Listen to keyboard events
+  React.useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Update form when service changes
   React.useEffect(() => {
@@ -328,6 +346,22 @@ const ServiceFormModal = ({
       setWhatsIncluded([]);
     }
   }, [service]);
+
+  // Reset form when modal closes and it's not editing
+  React.useEffect(() => {
+    if (!visible && !service) {
+      setName('');
+      setDescription('');
+      setBasePrice('');
+      setDuration('');
+      setCategory('cleaning');
+      setImageUri('');
+      setWhatsIncluded([]);
+      setNewIncludedItem('');
+      setShowCategoryPicker(false);
+      setShowImagePicker(false);
+    }
+  }, [visible, service]);
 
   const handleImageSelected = (uri: string) => {
     setImageUri(uri);
@@ -368,6 +402,15 @@ const ServiceFormModal = ({
         await onUpdate(service.id, data);
       } else {
         await onCreate(data);
+        // Reset form after creating new service
+        setName('');
+        setDescription('');
+        setBasePrice('');
+        setDuration('');
+        setCategory('cleaning');
+        setImageUri('');
+        setWhatsIncluded([]);
+        setNewIncludedItem('');
       }
     } catch (error) {
       console.error('Submit service error:', error);
@@ -379,7 +422,7 @@ const ServiceFormModal = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         {/* Modern Header */}
-        <View className="pt-12 px-6 pb-6" style={{ backgroundColor: colors.background }}>
+        <View className="px-6 pb-6" style={{ paddingTop: Math.max(insets.top + 16, 48), backgroundColor: colors.background }}>
           <View className="flex-row items-center justify-between mb-4">
             <View>
               <Text className="text-2xl font-bold" style={{ color: colors.text }}>
@@ -399,7 +442,11 @@ const ServiceFormModal = ({
           </View>
         </View>
 
-        <ScrollView className="flex-1 px-6 pt-6">
+        <ScrollView 
+          className="flex-1 px-6 pt-6"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: keyboardVisible ? 400 : 50 }}
+        >
           {/* Service Image - Modern Design */}
           <View className="mb-6">
             <Text className="text-base font-semibold mb-3" style={{ color: colors.text }}>
@@ -583,7 +630,7 @@ const ServiceFormModal = ({
           />
 
           {/* What's Included Section */}
-          <View className="mb-6">
+          <View className="mb-2">
             <Text className="text-base font-semibold mb-3" style={{ color: colors.text }}>
               What's Included
             </Text>
@@ -653,11 +700,10 @@ const ServiceFormModal = ({
             )}
           </View>
 
-          <View className="h-6" />
-        </ScrollView>
+          <View className="h-2" />
 
         {/* Modern Footer */}
-        <View className="px-6 pb-8 pt-6" style={{ backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <View className="px-6 pt-6 mb-6" style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
           <View className="flex-row gap-3">
             <Pressable
               onPress={onClose}
@@ -679,6 +725,7 @@ const ServiceFormModal = ({
             />
           </View>
         </View>
+        </ScrollView>
       </View>
 
       {/* Image Picker Bottom Sheet */}
