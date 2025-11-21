@@ -113,7 +113,10 @@ const ProviderDashboard = observer(() => {
           <View className="flex-row gap-3 mb-3">
             <Pressable 
               className="flex-1 active:opacity-70"
-              onPress={() => router.push('/(provider)/(tabs)/bookings')}
+              onPress={() => router.push({
+                pathname: '/(provider)/(tabs)/bookings',
+                params: { filter: 'today' },
+              })}
             >
               <Card variant="elevated" className="p-4">
                 <Ionicons name="calendar-outline" size={28} color={colors.primary} />

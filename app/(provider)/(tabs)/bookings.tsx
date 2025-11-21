@@ -6,24 +6,66 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProviderBookings } from '@/hooks/useBookings';
 import { BookingStatus } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 type BookingTab = 'new' | 'upcoming' | 'completed' | 'cancelled';
 
 const ProviderBookingsScreen = observer(() => {
   const { colors } = useTheme();
+  const { filter } = useLocalSearchParams<{ filter?: string }>();
   const [activeTab, setActiveTab] = useState<BookingTab>('new');
   const { user } = useAuth();
   const router = useRouter();
+
+  // Set initial tab from params or reset to default when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (filter === 'today') {
+        setActiveTab('upcoming');
+      } else if (filter === 'completed') {
+        setActiveTab('completed');
+      } else if (!filter) {
+        // Reset to default when no filter param
+        setActiveTab('new');
+      }
+    }, [filter])
+  );
 
   // Fetch provider's bookings
   const { data: allBookings = [], isLoading } = useProviderBookings(user?.uid || null);
 
   // Filter bookings based on active tab
   const filteredBookings = allBookings.filter((booking) => {
+    // Handle 'today' filter - only show today's bookings
+    if (filter === 'today') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const getBookingDateStr = (scheduledDate: any): string => {
+        if (!scheduledDate) return '';
+        if (scheduledDate?.toDate) {
+          return scheduledDate.toDate().toISOString().split('T')[0];
+        }
+        if (scheduledDate instanceof Date) {
+          return scheduledDate.toISOString().split('T')[0];
+        }
+        if (typeof scheduledDate === 'string') {
+          return scheduledDate.split('T')[0];
+        }
+        return '';
+      };
+      
+      const bookingDateStr = getBookingDateStr(booking.scheduledDate);
+      const isToday = bookingDateStr === todayStr;
+      
+      // Only show today's bookings that are in upcoming statuses
+      return isToday && ['accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(booking.status);
+    }
+    
     switch (activeTab) {
       case 'new':
         return booking.status === 'pending';
