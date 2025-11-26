@@ -155,23 +155,6 @@ const ProviderDashboard = observer(() => {
           <View className="flex-row gap-3">
             <Pressable 
               className="flex-1 active:opacity-70"
-              onPress={() => router.push('/(provider)/(tabs)/earnings')}
-            >
-              <Card variant="elevated" className="p-4">
-                <Ionicons name="cash-outline" size={28} color={colors.warning} />
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={colors.warning} style={{ marginTop: 8 }} />
-                ) : (
-                  <Text className="text-2xl font-bold mt-2" style={{ color: colors.text }}>
-                    ₹{stats?.totalEarnings || 0}
-                  </Text>
-                )}
-                <Text className="text-xs" style={{ color: colors.textSecondary }}>Total Earnings</Text>
-              </Card>
-            </Pressable>
-
-            <Pressable 
-              className="flex-1 active:opacity-70"
               onPress={() => {
                 if (user?.uid) {
                   router.push(`/provider/reviews/${user.uid}`);
@@ -412,30 +395,6 @@ const ProviderDashboard = observer(() => {
             </Card>
           </Pressable>
 
-          <Pressable 
-            className="active:opacity-70"
-            onPress={() => router.push('/(provider)/(tabs)/earnings')}
-          >
-            <Card variant="default">
-              <View className="flex-row items-center">
-                <View 
-                  className="w-12 h-12 rounded-full items-center justify-center"
-                  style={{ backgroundColor: `${colors.warning}20` }}
-                >
-                  <Ionicons name="cash-outline" size={24} color={colors.warning} />
-                </View>
-                <View className="flex-1 ml-4">
-                  <Text className="text-base font-bold" style={{ color: colors.text }}>
-                    Earnings Report
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                    View detailed earnings
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </View>
-            </Card>
-          </Pressable>
         </View>
 
         <View className="h-6" />

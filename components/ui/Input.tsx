@@ -31,8 +31,8 @@ export function Input({
       {label && (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>
-            {label}
-          </Text>
+          {label}
+        </Text>
           {required && (
             <Text style={{ fontSize: 14, color: colors.error, marginLeft: 4 }}>*</Text>
           )}

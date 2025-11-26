@@ -110,7 +110,7 @@ const ProviderProfileScreen = observer(() => {
                   </View>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              {/* <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} /> */}
             </View>
           </Card>
         </View>
@@ -136,16 +136,6 @@ const ProviderProfileScreen = observer(() => {
               </Text>
             )}
             <Text className="text-sm" style={{ color: colors.textSecondary }}>Rating</Text>
-          </Card>
-          <Card variant="elevated" className="flex-1 items-center py-4">
-            {isLoading ? (
-              <ActivityIndicator size="small" color={colors.success} />
-            ) : (
-              <Text className="text-2xl font-bold mb-1" style={{ color: colors.success }}>
-                ₹{stats?.totalEarnings || 0}
-              </Text>
-            )}
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>Earned</Text>
           </Card>
         </View>
 

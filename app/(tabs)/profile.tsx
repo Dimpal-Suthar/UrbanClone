@@ -16,10 +16,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } f
 const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'location-outline', label: 'Saved Addresses', screen: 'addresses' },
-  { id: '3', icon: 'card-outline', label: 'Payment Methods', screen: 'payment-methods' },
-  { id: '4', icon: 'gift-outline', label: 'Rewards & Offers', screen: 'rewards' },
-  { id: '5', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '6', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '3', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
+  { id: '4', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
 ];
 
 const ProfileScreen = observer(() => {
@@ -112,7 +110,7 @@ const ProfileScreen = observer(() => {
                   </View>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              {/* <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} /> */}
             </View>
           </Card>
         </View>

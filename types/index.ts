@@ -184,8 +184,8 @@ export interface BookingAddress {
   state: string;
   pincode: string;
   landmark?: string;
-  lat?: number;
-  lng?: number;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export type BookingStatus =

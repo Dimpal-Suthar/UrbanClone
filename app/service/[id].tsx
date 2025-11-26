@@ -369,7 +369,10 @@ export default function ServiceDetailScreen() {
                     <Pressable 
                       key={`provider-${provider.id}-${index}`}
                       onPress={() => {
-                        router.push(`/provider/${provider.id}`);
+                        router.push({
+                          pathname: '/provider/[id]',
+                          params: { id: provider.id, serviceId: id }
+                        });
                       }}
                       className="active:opacity-70"
                     >

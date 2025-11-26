@@ -8,7 +8,7 @@ import { Link, useRouter } from 'expo-router';
 import { Formik } from 'formik';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import * as Yup from 'yup';
 
 const PASSWORD_RULE_MESSAGE = 'Use 8+ characters with uppercase, lowercase, and a number.';
@@ -104,21 +104,7 @@ const EmailAuthScreen = observer(() => {
                   await signUpWithEmail(values.email, values.password, values.name, wantsProvider);
 
                   if (wantsProvider) {
-                    Alert.alert(
-                      'Complete Your Provider Profile',
-                      'Please add your services, experience, and bio to complete your provider application. Admin will review it within 24–48 hours.',
-                      [
-                        {
-                          text: 'Complete Now',
-                          onPress: () => router.replace('/provider/apply'),
-                        },
-                        {
-                          text: 'Later',
-                          style: 'cancel',
-                          onPress: () => router.replace('/(tabs)'),
-                        },
-                      ]
-                    );
+                    router.replace('/provider/apply');
                   } else {
                     router.replace('/(tabs)');
                   }

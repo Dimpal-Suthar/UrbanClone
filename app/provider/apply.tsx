@@ -11,6 +11,12 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
+type ApplyErrors = {
+  services?: string;
+  experience?: string;
+  bio?: string;
+};
+
 const AVAILABLE_SERVICES = [
   { id: 'cleaning', name: 'Home Cleaning', icon: 'sparkles' },
   { id: 'repairs', name: 'Repairs & Maintenance', icon: 'build' },
@@ -29,30 +35,56 @@ export default function ProviderApplicationScreen() {
   const [experience, setExperience] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<ApplyErrors>({});
 
   const toggleService = (serviceId: string) => {
-    if (selectedServices.includes(serviceId)) {
-      setSelectedServices(selectedServices.filter(id => id !== serviceId));
-    } else {
-      setSelectedServices([...selectedServices, serviceId]);
+    const updatedServices = selectedServices.includes(serviceId)
+      ? selectedServices.filter(id => id !== serviceId)
+      : [...selectedServices, serviceId];
+
+    setSelectedServices(updatedServices);
+
+    if (updatedServices.length > 0 && errors.services) {
+      setErrors(prev => ({ ...prev, services: undefined }));
     }
   };
 
   const handleExperienceChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '').slice(0, 2);
     setExperience(numericValue);
+    if (numericValue && errors.experience) {
+      setErrors(prev => ({ ...prev, experience: undefined }));
+    }
+  };
+
+  const handleBioChange = (text: string) => {
+    setBio(text);
+    if (text.trim() && errors.bio) {
+      setErrors(prev => ({ ...prev, bio: undefined }));
+    }
   };
 
   const handleSubmit = async () => {
+    const validationErrors: ApplyErrors = {};
+
     if (selectedServices.length === 0) {
-      Alert.alert('Error', 'Please select at least one service');
+      validationErrors.services = 'Select at least one service you can offer.';
+    }
+
+    if (!experience) {
+      validationErrors.experience = 'Enter your professional experience.';
+    }
+
+    if (!bio.trim()) {
+      validationErrors.bio = 'Tell customers about your skills and work style.';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    if (!experience || !bio) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    setErrors({});
 
     try {
       setLoading(true);
@@ -108,9 +140,25 @@ export default function ProviderApplicationScreen() {
             Start earning by offering your services
           </Text>
 
+          <Card
+            style={{
+              marginBottom: 20,
+              backgroundColor: `${colors.primary}08`,
+              borderColor: `${colors.primary}30`,
+              borderWidth: 1,
+            }}
+          >
+            <Text className="text-base font-semibold mb-1" style={{ color: colors.primary }}>
+              Quick heads-up
+            </Text>
+            <Text className="text-sm" style={{ color: colors.text }}>
+              Admin reviews applications within 24–48 hours. You can keep using the app as a customer meanwhile.
+            </Text>
+          </Card>
+
           <Card style={{ marginBottom: 24 }}>
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
-              Which services do you offer?
+              Which services do you offer? <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <View className="mt-4">
               {AVAILABLE_SERVICES.map((service) => (
@@ -149,30 +197,39 @@ export default function ProviderApplicationScreen() {
                 </Pressable>
               ))}
             </View>
+            {errors.services && (
+              <Text className="text-sm mt-3" style={{ color: colors.error }}>
+                {errors.services}
+              </Text>
+            )}
           </Card>
 
           <Card style={{ marginBottom: 24 }}>
             <Input
               label="Years of Experience"
+              required
               leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
               placeholder="e.g., 5"
               value={experience}
               onChangeText={handleExperienceChange}
               keyboardType="number-pad"
               maxLength={2}
+              error={errors.experience}
             />
           </Card>
 
           <Card style={{ marginBottom: 32 }}>
             <Input
               label="About You"
+              required
               placeholder="Tell customers about your skills and experience..."
               value={bio}
-              onChangeText={setBio}
+              onChangeText={handleBioChange}
               multiline
               numberOfLines={4}
               style={{ minHeight: 120, textAlignVertical: 'top' }}
               maxLength={500}
+              error={errors.bio}
             />
           </Card>
 

@@ -1,4 +1,5 @@
 import { db } from '@/config/firebase';
+import { useRouter, useSegments } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
@@ -10,13 +11,22 @@ import { useAuth } from './useAuth';
  */
 export function useProviderApplicationStatus() {
   const { user, userProfile } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
   const previousStatusRef = useRef<string | undefined>(undefined);
   const hasShownRejectionRef = useRef(false);
+  const hasRedirectedToApplyRef = useRef(false);
+  const segmentsRef = useRef(segments);
+
+  useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
 
   useEffect(() => {
     // Reset when user changes
     previousStatusRef.current = undefined;
     hasShownRejectionRef.current = false;
+    hasRedirectedToApplyRef.current = false;
 
     if (!user?.uid) {
       console.log('👤 No user, skipping provider status monitor');
@@ -51,6 +61,27 @@ export function useProviderApplicationStatus() {
 
         // Store current status
         previousStatusRef.current = currentStatus;
+
+        const needsMoreDetails =
+          currentStatus === 'pending' &&
+          (!Array.isArray(providerData?.services) || providerData.services.length === 0 ||
+            !providerData?.experience || !providerData?.bio?.trim());
+
+        if (needsMoreDetails) {
+          const currentSegments = segmentsRef.current;
+          const isOnApplyScreen =
+            Array.isArray(currentSegments) &&
+            currentSegments[0] === 'provider' &&
+            currentSegments[1] === 'apply';
+
+          if (!isOnApplyScreen && !hasRedirectedToApplyRef.current) {
+            hasRedirectedToApplyRef.current = true;
+            console.log('🔁 Redirecting to provider apply screen to complete details');
+            router.replace('/provider/apply');
+          }
+        } else {
+          hasRedirectedToApplyRef.current = false;
+        }
 
         // Check if status is rejected and we haven't shown the alert yet
         if (currentStatus === 'rejected' && !hasShownRejectionRef.current) {
@@ -94,6 +125,6 @@ export function useProviderApplicationStatus() {
       console.log('🧹 Cleaning up provider status listener');
       unsubscribe();
     };
-  }, [user?.uid, userProfile?.role]);
+  }, [router, user?.uid, userProfile?.role]);
 }
 

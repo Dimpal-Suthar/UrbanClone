@@ -56,13 +56,6 @@ export default function ProviderTabsLayout() {
         }} 
       />
       <Tabs.Screen 
-        name="earnings" 
-        options={{
-          title: 'Earnings',
-          tabBarIcon: ({ color }) => <Ionicons name="cash" size={24} color={color} />
-        }} 
-      />
-      <Tabs.Screen 
         name="profile" 
         options={{
           title: 'Profile',

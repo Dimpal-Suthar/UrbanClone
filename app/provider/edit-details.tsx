@@ -12,6 +12,12 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+type ProviderDetailErrors = {
+  services?: string;
+  experience?: string;
+  bio?: string;
+};
+
 const AVAILABLE_SERVICES = [
   { id: 'cleaning', name: 'Home Cleaning', icon: 'sparkles' },
   { id: 'repairs', name: 'Repairs & Maintenance', icon: 'build' },
@@ -20,6 +26,7 @@ const AVAILABLE_SERVICES = [
   { id: 'painting', name: 'Painting', icon: 'color-palette' },
   { id: 'pest-control', name: 'Pest Control', icon: 'bug' },
 ];
+const AVAILABLE_SERVICE_IDS = AVAILABLE_SERVICES.map((service) => service.id);
 
 export default function EditProviderDetailsScreen() {
   const router = useRouter();
@@ -33,6 +40,7 @@ export default function EditProviderDetailsScreen() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [errors, setErrors] = useState<ProviderDetailErrors>({});
 
   // Listen to keyboard events
   useEffect(() => {
@@ -62,7 +70,11 @@ export default function EditProviderDetailsScreen() {
       
       if (providerDoc.exists()) {
         const data = providerDoc.data();
-        setSelectedServices(data.services || []);
+        const savedServices = Array.isArray(data.services) ? data.services : [];
+        const validServices = savedServices.filter((serviceId: string) =>
+          AVAILABLE_SERVICE_IDS.includes(serviceId)
+        );
+        setSelectedServices(validServices);
         setExperience(data.experience ? String(data.experience) : '');
         setBio(data.bio || '');
       }
@@ -75,28 +87,53 @@ export default function EditProviderDetailsScreen() {
   };
 
   const toggleService = (serviceId: string) => {
-    if (selectedServices.includes(serviceId)) {
-      setSelectedServices(selectedServices.filter(id => id !== serviceId));
-    } else {
-      setSelectedServices([...selectedServices, serviceId]);
+    const updatedServices = selectedServices.includes(serviceId)
+      ? selectedServices.filter(id => id !== serviceId)
+      : [...selectedServices, serviceId];
+
+    setSelectedServices(updatedServices);
+
+    if (updatedServices.length > 0 && errors.services) {
+      setErrors(prev => ({ ...prev, services: undefined }));
     }
   };
 
   const handleExperienceChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '').slice(0, 2);
     setExperience(numericValue);
+    if (numericValue && errors.experience) {
+      setErrors(prev => ({ ...prev, experience: undefined }));
+    }
+  };
+
+  const handleBioChange = (text: string) => {
+    setBio(text);
+    if (text.trim() && errors.bio) {
+      setErrors(prev => ({ ...prev, bio: undefined }));
+    }
   };
 
   const handleSubmit = async () => {
+    const validationErrors: ProviderDetailErrors = {};
+
     if (selectedServices.length === 0) {
-      Alert.alert('Error', 'Please select at least one service');
-      return;
+      validationErrors.services = 'Select at least one service to offer.';
+    }
+
+    if (!experience) {
+      validationErrors.experience = 'Enter your professional experience.';
     }
 
     if (!bio.trim()) {
-      Alert.alert('Error', 'Please add your bio');
+      validationErrors.bio = 'Share a short bio to help customers trust you.';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
+
+    setErrors({});
 
     try {
       setLoading(true);
@@ -160,9 +197,9 @@ export default function EditProviderDetailsScreen() {
           contentContainerStyle={{ paddingBottom: keyboardVisible ? 400 : Math.max(insets.bottom + 50, 50) }}
         >
           <View className="px-6" style={{ paddingTop: Math.max(insets.top + 16, 16) }}>
-            <Pressable onPress={() => router.back()} className="mb-6">
-              <Ionicons name="arrow-back" size={28} color={colors.text} />
-            </Pressable>
+          <Pressable onPress={() => router.back()} className="mb-6">
+            <Ionicons name="arrow-back" size={28} color={colors.text} />
+          </Pressable>
 
           <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
             Edit Provider Details
@@ -173,8 +210,8 @@ export default function EditProviderDetailsScreen() {
 
           <Card style={{ marginBottom: 24 }}>
             <Text className="text-lg font-bold" style={{ color: colors.text }}>
-            Which services do you offer?
-          </Text>
+              Which services do you offer? <Text style={{ color: colors.error }}>*</Text>
+            </Text>
             <View className="mt-4">
             {AVAILABLE_SERVICES.map((service) => (
               <Pressable
@@ -212,33 +249,40 @@ export default function EditProviderDetailsScreen() {
               </Pressable>
             ))}
           </View>
+            {errors.services && (
+              <Text className="text-sm mt-3" style={{ color: colors.error }}>
+                {errors.services}
+              </Text>
+            )}
           </Card>
 
           <Card style={{ marginBottom: 24 }}>
-          <Input
-            label="Years of Experience"
-            required
-            leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
-            placeholder="e.g., 5"
-            value={experience}
+            <Input
+              label="Years of Experience"
+              required
+              leftIcon={<Ionicons name="time-outline" size={20} color={colors.textSecondary} />}
+              placeholder="e.g., 5"
+              value={experience}
               onChangeText={handleExperienceChange}
-            keyboardType="number-pad"
+              keyboardType="number-pad"
               maxLength={2}
+              error={errors.experience}
             />
           </Card>
 
           <Card style={{ marginBottom: 32 }}>
-              <Input
+            <Input
               label="About You"
               required
-                placeholder="Tell customers about your skills and experience..."
-                value={bio}
-                onChangeText={setBio}
-                multiline
-                numberOfLines={4}
+              placeholder="Tell customers about your skills and experience..."
+              value={bio}
+              onChangeText={handleBioChange}
+              multiline
+              numberOfLines={4}
               style={{ minHeight: 120, textAlignVertical: 'top' }}
               maxLength={500}
-              />
+              error={errors.bio}
+            />
           </Card>
 
           {/* Submit Button */}
@@ -250,8 +294,8 @@ export default function EditProviderDetailsScreen() {
             variant="primary"
             size="lg"
           />
-          </View>
-        </ScrollView>
+        </View>
+      </ScrollView>
       </KeyboardAvoidingView>
     </Container>
   );

@@ -54,8 +54,8 @@ export default function ConfirmBookingScreen() {
     state: addressState as string,
     pincode: addressPincode as string,
     landmark: (addressLandmark as string) || '',
-    lat: addressLat ? parseFloat(addressLat as string) : undefined,
-    lng: addressLng ? parseFloat(addressLng as string) : undefined,
+    lat: addressLat && addressLat !== '' ? parseFloat(addressLat as string) : null,
+    lng: addressLng && addressLng !== '' ? parseFloat(addressLng as string) : null,
   };
 
   const dateObj = new Date(scheduledDate as string);

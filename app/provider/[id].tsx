@@ -3,21 +3,25 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useGetOrCreateConversation } from '@/hooks/useConversations';
 import { useProvidersForService } from '@/hooks/useProviders';
 import { useProviderReviews } from '@/hooks/useReviews';
+import { showFailedMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 export default function ProviderDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, serviceId } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
+  const { user, userProfile } = useAuth();
+  const createConversationMutation = useGetOrCreateConversation();
 
-  // For now, we'll get the provider from the service providers
-  // In a real app, you'd have a direct provider lookup
-  const { data: providers = [], isLoading: loadingProviders } = useProvidersForService('NYcfW3AUGAGrdLx3jcaw'); // You'll need to pass the service ID
+  // Fetch provider from the service they're offering
+  const { data: providers = [], isLoading: loadingProviders } = useProvidersForService(serviceId as string || 'NYcfW3AUGAGrdLx3jcaw');
   
   const provider = providers.find(p => p.id === id);
   
@@ -104,25 +108,82 @@ export default function ProviderDetailScreen() {
 
   const offering = provider.offering;
   const providerName = provider.name || provider.displayName || provider.email?.split('@')[0] || 'Professional Provider';
+  const providerPhoto = provider.photoURL || null;
+
+  const handleMessageProvider = async () => {
+    if (!user?.uid) {
+      showWarningMessage('Login required', 'Please sign in to start chatting with this provider.');
+      router.push('/auth/email');
+      return;
+    }
+
+    if (user.uid === provider.id) {
+      showWarningMessage('Unavailable', 'You cannot start a chat with yourself.');
+      return;
+    }
+
+    try {
+      const conversation = await createConversationMutation.mutateAsync({
+        customerId: user.uid,
+        providerId: provider.id,
+        customerName: userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Customer',
+        customerPhoto: userProfile?.photoURL || user.photoURL || null,
+        providerName,
+        providerPhoto,
+        bookingId: offering?.id || `direct-inquiry-${provider.id}`,
+      });
+
+      router.push(`/chat/${conversation.id}`);
+    } catch (error) {
+      console.error('Error creating conversation from provider details:', error);
+      showFailedMessage('Chat unavailable', 'Unable to open chat right now. Please try again.');
+    }
+  };
 
   return (
     <Container safeArea={true} edges={['top']}>
       {/* Header */}
-      <View style={{ 
+      <View
+        style={{
         flexDirection: 'row', 
         alignItems: 'center', 
+          justifyContent: 'space-between',
         paddingHorizontal: 24, 
         paddingVertical: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: colors.border,
         backgroundColor: colors.background,
-      }}>
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, marginLeft: 16 }}>
           Provider Details
         </Text>
+        </View>
+
+        <Pressable
+          onPress={handleMessageProvider}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: `${colors.primary}15`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 12,
+          }}
+          className="active:opacity-70"
+          disabled={createConversationMutation.isPending}
+        >
+          {createConversationMutation.isPending ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+          )}
+        </Pressable>
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -393,7 +454,7 @@ export default function ProviderDetailScreen() {
           </Card>
 
           {/* Contact Actions */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          <View style={{ marginBottom: 24 }}>
             <Button
               title="Book Service"
               onPress={() => {
@@ -409,16 +470,7 @@ export default function ProviderDetailScreen() {
                   }
                 });
               }}
-              className="flex-1"
-            />
-            <Button
-              title="Message"
-              variant="outline"
-              onPress={() => {
-                // Navigate to chat screen with provider
-                router.push(`/chat/${provider.id}`);
-              }}
-              className="flex-1"
+              className="w-full"
             />
           </View>
         </View>

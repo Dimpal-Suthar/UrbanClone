@@ -87,7 +87,10 @@ export default function AllProfessionalsScreen() {
                 <Pressable 
                   key={`professional-${provider.id}-${mapIndex}`}
                   onPress={() => {
-                    router.push(`/provider/${provider.id}`);
+                    router.push({
+                      pathname: '/provider/[id]',
+                      params: { id: provider.id, serviceId: id }
+                    });
                   }}
                   className="active:opacity-70"
                 >

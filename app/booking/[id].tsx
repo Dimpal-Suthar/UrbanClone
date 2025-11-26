@@ -20,10 +20,11 @@ import { BookingStatus } from '@/types';
 import { makeCall } from '@/utils/callHelpers';
 import { showFailedMessage, showSuccessMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Image,
   Modal,
   Pressable,
@@ -40,6 +41,20 @@ export default function BookingDetailScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  
+  // Handle hardware back button
+  useEffect(() => {
+    if (fromBookingFlow === 'true') {
+      const onBackPress = () => {
+        router.replace('/(tabs)/bookings');
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => backHandler.remove();
+    }
+  }, [fromBookingFlow, router]);
   
   // Handle back button - if coming from booking flow, go to bookings tab
   const handleBackPress = () => {
@@ -337,6 +352,9 @@ export default function BookingDetailScreen() {
 
   return (
     <Container safeArea edges={['top']}>
+      {fromBookingFlow === 'true' && (
+        <Stack.Screen options={{ gestureEnabled: false }} />
+      )}
       {/* Header */}
       <View
         style={{
