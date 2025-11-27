@@ -222,6 +222,7 @@ export const useCreateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -240,6 +241,7 @@ export const useUpdateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -265,6 +267,7 @@ export const useUpdateBookingStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -291,6 +294,7 @@ export const useCancelBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -307,6 +311,7 @@ export const useAcceptBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['booking'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -324,6 +329,7 @@ export const useRejectBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['booking'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -340,6 +346,7 @@ export const useStartService = () => {
       queryClient.invalidateQueries({ queryKey: ['booking'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -358,6 +365,7 @@ export const useCompleteBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -374,6 +382,7 @@ export const useMarkOnTheWay = () => {
       queryClient.invalidateQueries({ queryKey: ['booking'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };
@@ -401,6 +410,7 @@ export const useRescheduleBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['available-slots'] });
     },
   });
 };

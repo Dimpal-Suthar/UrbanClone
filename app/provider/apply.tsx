@@ -8,8 +8,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ApplyErrors = {
   services?: string;
@@ -30,12 +40,24 @@ export default function ProviderApplicationScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [experience, setExperience] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<ApplyErrors>({});
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const toggleService = (serviceId: string) => {
     const updatedServices = selectedServices.includes(serviceId)
@@ -127,8 +149,20 @@ export default function ProviderApplicationScreen() {
 
   return (
     <Container>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 pt-16 pb-8">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            paddingBottom: keyboardVisible ? 320 : Math.max(insets.bottom + 80, 80),
+          }}
+        >
+          <View className="px-6 pt-16 pb-8">
           <Pressable onPress={() => router.back()} className="mb-6">
             <Ionicons name="arrow-back" size={28} color={colors.text} />
           </Pressable>
@@ -233,7 +267,25 @@ export default function ProviderApplicationScreen() {
             />
           </Card>
 
-          {/* Submit Button */}
+          <View style={{ height: 12 }} />
+        </View>
+        </ScrollView>
+
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom + 16, 16),
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+        >
           <Button
             title="Submit Application"
             onPress={handleSubmit}
@@ -243,7 +295,7 @@ export default function ProviderApplicationScreen() {
             size="lg"
           />
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </Container>
   );
 }

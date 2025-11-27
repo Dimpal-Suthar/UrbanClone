@@ -26,11 +26,13 @@ import {
   ActivityIndicator,
   BackHandler,
   Image,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,7 +48,8 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     if (fromBookingFlow === 'true') {
       const onBackPress = () => {
-        router.replace('/(tabs)/bookings');
+        // Use navigate instead of replace to unwind the stack to the tabs
+        router.navigate('/(tabs)/bookings');
         return true;
       };
 
@@ -59,7 +62,8 @@ export default function BookingDetailScreen() {
   // Handle back button - if coming from booking flow, go to bookings tab
   const handleBackPress = () => {
     if (fromBookingFlow === 'true') {
-      router.replace('/(tabs)/bookings');
+      // Use navigate instead of replace to unwind the stack to the tabs
+      router.navigate('/(tabs)/bookings');
     } else {
       router.back();
     }
@@ -714,110 +718,114 @@ export default function BookingDetailScreen() {
 
       {/* Cancel Modal */}
       <Modal visible={showCancelModal} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-          }}
-        >
-          <Card variant="elevated" style={{ padding: 24 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 16 }}>
-              Cancel Booking
-            </Text>
-            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
-              Please provide a reason for cancellation:
-            </Text>
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 8,
-                padding: 12,
-                color: colors.text,
-                backgroundColor: colors.background,
-                minHeight: 100,
-                textAlignVertical: 'top',
-                marginBottom: 20,
-              }}
-              placeholder="Reason for cancellation..."
-              placeholderTextColor={colors.textSecondary}
-              value={cancelReason}
-              onChangeText={setCancelReason}
-              multiline
-            />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Close"
-                  variant="outline"
-                  onPress={() => {
-                    setShowCancelModal(false);
-                    setCancelReason('');
-                  }}
-                />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
+            <Card variant="elevated" style={{ padding: 24 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 16 }}>
+                Cancel Booking
+              </Text>
+              <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
+                Please provide a reason for cancellation:
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  color: colors.text,
+                  backgroundColor: colors.background,
+                  minHeight: 100,
+                  textAlignVertical: 'top',
+                  marginBottom: 20,
+                }}
+                placeholder="Reason for cancellation..."
+                placeholderTextColor={colors.textSecondary}
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                multiline
+              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Close"
+                    variant="outline"
+                    onPress={() => {
+                      setShowCancelModal(false);
+                      setCancelReason('');
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Cancel Booking" onPress={handleCancelBooking} />
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button title="Cancel Booking" onPress={handleCancelBooking} />
-              </View>
-            </View>
-          </Card>
-        </View>
+            </Card>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Reject Modal */}
       <Modal visible={showRejectModal} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-          }}
-        >
-          <Card variant="elevated" style={{ padding: 24 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 16 }}>
-              Reject Booking
-            </Text>
-            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
-              Please provide a reason for rejection:
-            </Text>
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 8,
-                padding: 12,
-                color: colors.text,
-                backgroundColor: colors.background,
-                minHeight: 100,
-                textAlignVertical: 'top',
-                marginBottom: 20,
-              }}
-              placeholder="Reason for rejection..."
-              placeholderTextColor={colors.textSecondary}
-              value={rejectReason}
-              onChangeText={setRejectReason}
-              multiline
-            />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Close"
-                  variant="outline"
-                  onPress={() => {
-                    setShowRejectModal(false);
-                    setRejectReason('');
-                  }}
-                />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
+            <Card variant="elevated" style={{ padding: 24 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 16 }}>
+                Reject Booking
+              </Text>
+              <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
+                Please provide a reason for rejection:
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  color: colors.text,
+                  backgroundColor: colors.background,
+                  minHeight: 100,
+                  textAlignVertical: 'top',
+                  marginBottom: 20,
+                }}
+                placeholder="Reason for rejection..."
+                placeholderTextColor={colors.textSecondary}
+                value={rejectReason}
+                onChangeText={setRejectReason}
+                multiline
+              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Close"
+                    variant="outline"
+                    onPress={() => {
+                      setShowRejectModal(false);
+                      setRejectReason('');
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Reject" onPress={handleRejectBooking} />
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button title="Reject" onPress={handleRejectBooking} />
-              </View>
-            </View>
-          </Card>
-        </View>
+            </Card>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Complete Service Modal */}
