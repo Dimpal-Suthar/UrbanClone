@@ -1,17 +1,27 @@
 import { ConfigContext, ExpoConfig } from '@expo/config';
+import * as dotenv from 'dotenv';
+
+// Load .env file explicitly (needed for app.config.ts during build)
+dotenv.config();
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   // Google Maps API key must be provided via environment variable
-  // Set it using: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY
-  // Or set it in your local .env file for development
+  // For EAS builds: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY
+  // For local builds: Set in .env file (automatically loaded) or export before build
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   
   if (!googleMapsApiKey) {
-    throw new Error(
-      'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is required. ' +
-      'Please set it as an EAS secret or in your environment variables. ' +
-      'Run: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY'
-    );
+    const isLocalBuild = process.env.EAS_LOCAL_BUILD === 'true' || process.argv.includes('--local');
+    const errorMessage = isLocalBuild
+      ? 'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is required for local builds.\n\n' +
+        'Set it in one of these ways:\n' +
+        '1. Environment variable: EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_key yarn build:android:apk --local\n' +
+        '2. Create .env file: echo "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_key" > .env\n' +
+        '3. Export before build: export EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_key'
+      : 'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is required. ' +
+        'Please set it as an EAS secret: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY';
+    
+    throw new Error(errorMessage);
   }
 
   return {
