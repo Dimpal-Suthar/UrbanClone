@@ -11,6 +11,7 @@ const SplashScreen = observer(() => {
   const { user, userProfile, loading, hasSeenOnboarding } = useAuth();
   const [showContent, setShowContent] = useState(false);
   const [profileLoadingTimeout, setProfileLoadingTimeout] = useState(false);
+  const [minDisplayTimeElapsed, setMinDisplayTimeElapsed] = useState(false);
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -21,19 +22,35 @@ const SplashScreen = observer(() => {
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
 
-    // Timeout fallback - show content after 3 seconds max (prevents infinite loading)
-    const fallback = setTimeout(() => {
-      console.log('⏱️ Timeout: Forcing navigation after 3s');
-      setShowContent(true);
-    }, 3000);
+    // Minimum display time - ensure splash shows for at least 2 seconds
+    const minDisplay = setTimeout(() => {
+      console.log('✅ Minimum splash display time elapsed (2s)');
+      setMinDisplayTimeElapsed(true);
+    }, 2000);
 
-    return () => clearTimeout(fallback);
+    // Maximum timeout fallback - force navigation after 5 seconds (prevents infinite loading)
+    const fallback = setTimeout(() => {
+      console.log('⏱️ Timeout: Forcing navigation after 5s');
+      setShowContent(true);
+      setMinDisplayTimeElapsed(true);
+    }, 5000);
+
+    return () => {
+      clearTimeout(minDisplay);
+      clearTimeout(fallback);
+    };
   }, []);
 
   // Show content once loading is done OR user+profile available
+  // BUT only after minimum display time has elapsed
   // NOTE: With MobX observer(), this useEffect will run whenever loading, user, or userProfile changes
   useEffect(() => {
-    console.log('🔄 useEffect triggered - loading:', loading, 'user:', !!user, 'profile:', !!userProfile);
+    console.log('🔄 useEffect triggered - loading:', loading, 'user:', !!user, 'profile:', !!userProfile, 'minTime:', minDisplayTimeElapsed);
+    
+    // Only proceed if minimum display time has elapsed
+    if (!minDisplayTimeElapsed) {
+      return;
+    }
     
     // If loading is false, show content
     if (!loading) {
@@ -46,7 +63,7 @@ const SplashScreen = observer(() => {
       console.log('✅ User and profile both exist - showing content');
       setShowContent(true);
     }
-  }, [loading, user, userProfile]);
+  }, [loading, user, userProfile, minDisplayTimeElapsed]);
 
   // Profile loading timeout (only for cases where profile document doesn't exist)
   useEffect(() => {

@@ -25,7 +25,8 @@
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
         "YARN_ENABLE_IMMUTABLE_INSTALLS": "false",
-        "EAS_NO_FROZEN_LOCKFILE": "1"
+        "EAS_NO_FROZEN_LOCKFILE": "1",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
       },
       "channel": "preview"
     },
@@ -41,7 +42,8 @@
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production",
         "YARN_ENABLE_IMMUTABLE_INSTALLS": "false",
-        "EAS_NO_FROZEN_LOCKFILE": "1"
+        "EAS_NO_FROZEN_LOCKFILE": "1",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
       },
       "channel": "production"
     }
