@@ -258,8 +258,8 @@ const ProfileScreen = observer(() => {
                 />
                 <View className="ml-3 flex-1">
                   <Text className="text-base" style={{ color: colors.text }}>
-                    Push Notifications
-                  </Text>
+                  Push Notifications
+                </Text>
                   {loadingNotificationPref ? (
                     <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
                       Loading...
@@ -274,12 +274,12 @@ const ProfileScreen = observer(() => {
               {loadingNotificationPref ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Switch
-                  value={notificationsEnabled}
+              <Switch
+                value={notificationsEnabled}
                   onValueChange={handleNotificationToggle}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#FFFFFF"
+              />
               )}
             </View>
           </Card>

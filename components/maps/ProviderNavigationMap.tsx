@@ -152,14 +152,14 @@ export const ProviderNavigationMap: React.FC<ProviderNavigationMapProps> = ({
         () => locationService.requestPermissions(),
         async () => {
           // Permission granted, start tracking
-          const success = await locationService.startProviderTracking(bookingId, providerId);
-          
-          if (success) {
-            setIsTracking(true);
-            onTrackingStart?.();
-            showSuccessMessage('Success', 'Location tracking started');
-            startLocationUpdates();
-          } else {
+      const success = await locationService.startProviderTracking(bookingId, providerId);
+      
+      if (success) {
+        setIsTracking(true);
+        onTrackingStart?.();
+        showSuccessMessage('Success', 'Location tracking started');
+        startLocationUpdates();
+      } else {
             Alert.alert(
               'Tracking Failed',
               'Failed to start location tracking. Please ensure location services are enabled in your device settings.',

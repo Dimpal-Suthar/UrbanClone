@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useProviderBookings } from '@/hooks/useBookings';
+import { useProviderBookingCount, useProviderBookings } from '@/hooks/useBookings';
 import { BookingStatus } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -36,6 +36,18 @@ const ProviderBookingsScreen = observer(() => {
 
   // Fetch provider's bookings
   const { data: allBookings = [], isLoading } = useProviderBookings(user?.uid || null);
+
+  // Get optimized counts for each tab (using getCountFromServer)
+  const { data: newCount = 0 } = useProviderBookingCount(user?.uid || null, ['pending']);
+  const { data: upcomingCount = 0 } = useProviderBookingCount(
+    user?.uid || null,
+    ['accepted', 'confirmed', 'on-the-way', 'in-progress']
+  );
+  const { data: completedCount = 0 } = useProviderBookingCount(user?.uid || null, ['completed']);
+  const { data: cancelledCount = 0 } = useProviderBookingCount(
+    user?.uid || null,
+    ['cancelled', 'rejected']
+  );
 
   // Filter bookings based on active tab
   const filteredBookings = allBookings.filter((booking) => {
@@ -80,26 +92,12 @@ const ProviderBookingsScreen = observer(() => {
     }
   });
 
-  const getBookingCount = (tab: BookingTab) => {
-    switch (tab) {
-      case 'new':
-        return allBookings.filter(b => b.status === 'pending').length;
-      case 'upcoming':
-        return allBookings.filter(b => ['accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(b.status)).length;
-      case 'completed':
-        return allBookings.filter(b => b.status === 'completed').length;
-      case 'cancelled':
-        return allBookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).length;
-      default:
-        return 0;
-    }
-  };
-
+  // Use optimized counts (using getCountFromServer)
   const tabs: { key: BookingTab; label: string; count: number }[] = [
-    { key: 'new', label: 'New', count: getBookingCount('new') },
-    { key: 'upcoming', label: 'Upcoming', count: getBookingCount('upcoming') },
-    { key: 'completed', label: 'Completed', count: getBookingCount('completed') },
-    { key: 'cancelled', label: 'Cancelled', count: getBookingCount('cancelled') },
+    { key: 'new', label: 'New', count: newCount },
+    { key: 'upcoming', label: 'Upcoming', count: upcomingCount },
+    { key: 'completed', label: 'Completed', count: completedCount },
+    { key: 'cancelled', label: 'Cancelled', count: cancelledCount },
   ];
 
   const getStatusColor = (status: BookingStatus) => {

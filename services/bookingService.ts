@@ -14,6 +14,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   increment,
@@ -499,6 +500,87 @@ export const getAllBookings = async (): Promise<Booking[]> => {
   } catch (error) {
     console.error('❌ Error getting all bookings:', error);
     throw error;
+  }
+};
+
+/**
+ * Get count of customer bookings by status using optimized getCountFromServer
+ * This is much more efficient than fetching all documents
+ */
+export const getCustomerBookingCount = async (
+  customerId: string,
+  statuses: BookingStatus[]
+): Promise<number> => {
+  try {
+    if (!customerId || statuses.length === 0) return 0;
+
+    // If single status, use direct query
+    if (statuses.length === 1) {
+      const q = query(
+        collection(db, 'bookings'),
+        where('customerId', '==', customerId),
+        where('status', '==', statuses[0])
+      );
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
+    }
+
+    // For multiple statuses, we need to query each and sum
+    // Note: Firestore doesn't support OR queries efficiently, so we query each status
+    const countPromises = statuses.map(status => {
+      const q = query(
+        collection(db, 'bookings'),
+        where('customerId', '==', customerId),
+        where('status', '==', status)
+      );
+      return getCountFromServer(q);
+    });
+
+    const snapshots = await Promise.all(countPromises);
+    return snapshots.reduce((total, snapshot) => total + snapshot.data().count, 0);
+  } catch (error) {
+    console.error('❌ Error getting customer booking count:', error);
+    return 0;
+  }
+};
+
+/**
+ * Get count of provider bookings by status using optimized getCountFromServer
+ * This is much more efficient than fetching all documents
+ */
+export const getProviderBookingCount = async (
+  providerId: string,
+  statuses: BookingStatus[]
+): Promise<number> => {
+  try {
+    if (!providerId || statuses.length === 0) return 0;
+
+    // If single status, use direct query
+    if (statuses.length === 1) {
+      const q = query(
+        collection(db, 'bookings'),
+        where('providerId', '==', providerId),
+        where('status', '==', statuses[0])
+      );
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
+    }
+
+    // For multiple statuses, query each and sum
+    const countPromises = statuses.map(status => {
+      const q = query(
+        collection(db, 'bookings'),
+        where('providerId', '==', providerId),
+        where('status', '==', status)
+      );
+      return getCountFromServer(q);
+    });
+
+    const snapshots = await Promise.all(countPromises);
+    return snapshots.reduce((total, snapshot) => total + snapshot.data().count, 0);
+  } catch (error) {
+    console.error('❌ Error getting provider booking count:', error);
+    return 0;
   }
 };
 

@@ -221,10 +221,10 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
         lat: markerPosition.latitude,
         lng: markerPosition.longitude,
         formattedAddress: address || `${markerPosition.latitude.toFixed(6)}, ${markerPosition.longitude.toFixed(6)}`,
-      };
+        };
 
-      onAddressSelect(addressData, markerPosition);
-      showSuccessMessage('Success', 'Location confirmed');
+        onAddressSelect(addressData, markerPosition);
+        showSuccessMessage('Success', 'Location confirmed');
     } catch (error) {
       console.error('Error confirming location:', error);
       Alert.alert('Error', 'Failed to confirm location. Please try again.');

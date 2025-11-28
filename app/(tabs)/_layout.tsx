@@ -1,10 +1,12 @@
+import { TabBadge } from '@/components/ui/TabBadge';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useCustomerBookingCount } from '@/hooks/useBookings';
 import { useUnreadCount } from '@/hooks/useConversations';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -13,9 +15,15 @@ export default function TabLayout() {
   const router = useRouter();
   const segments = useSegments();
   
-  // Get unread count
+  // Get counts for badges (optimized using getCountFromServer)
   const { user } = useAuth();
   const { data: unreadCount = 0 } = useUnreadCount(user?.uid || null);
+  
+  // Get pending/upcoming bookings count (optimized - doesn't fetch all documents)
+  const { data: pendingBookingsCount = 0 } = useCustomerBookingCount(
+    user?.uid || null,
+    ['pending', 'accepted', 'confirmed', 'on-the-way', 'in-progress']
+  );
   
   // Removed auto-navigation - user can manually navigate to chat
 
@@ -53,7 +61,12 @@ export default function TabLayout() {
         options={{
           title: 'Bookings',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+            <View style={{ position: 'relative' }}>
+              <Ionicons name="calendar" size={size} color={color} />
+              {pendingBookingsCount > 0 && (
+                <TabBadge count={pendingBookingsCount} />
+              )}
+            </View>
           ),
         }}
       />
@@ -64,34 +77,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <View style={{ position: 'relative' }}>
               <Ionicons name="chatbubbles" size={size} color={color} />
-              {unreadCount > 0 && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: -6,
-                    right: -6,
-                    backgroundColor: colors.error,
-                    borderRadius: 10,
-                    minWidth: 20,
-                    height: 20,
-                    paddingHorizontal: 6,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 2,
-                    borderColor: colors.surface,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontSize: 11,
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
+              <TabBadge count={unreadCount} />
             </View>
           ),
         }}

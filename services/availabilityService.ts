@@ -421,7 +421,7 @@ const getDayOfWeek = (date: Date): DayOfWeek => {
 const parseSlotTime = (slot: TimeSlot, date: Date = new Date()): Date => {
   try {
     const startTime = slot.split(' - ')[0].trim();
-    const [time, period] = startTime.split(' ');
+  const [time, period] = startTime.split(' ');
     
     if (!time || !period) {
       console.error('❌ Invalid slot format:', slot);
@@ -429,21 +429,21 @@ const parseSlotTime = (slot: TimeSlot, date: Date = new Date()): Date => {
       return new Date('2099-12-31');
     }
     
-    const [hours, minutes] = time.split(':').map(Number);
+  const [hours, minutes] = time.split(':').map(Number);
     
     // Validate parsed values
     if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 12 || minutes < 0 || minutes > 59) {
       console.error('❌ Invalid time values:', { hours, minutes, slot });
       return new Date('2099-12-31');
     }
-    
-    let hour24 = hours;
+  
+  let hour24 = hours;
     if (period.toUpperCase() === 'PM' && hours !== 12) {
-      hour24 = hours + 12;
+    hour24 = hours + 12;
     } else if (period.toUpperCase() === 'AM' && hours === 12) {
-      hour24 = 0;
-    }
-    
+    hour24 = 0;
+  }
+  
     // Validate 24-hour format
     if (hour24 < 0 || hour24 > 23) {
       console.error('❌ Invalid 24-hour format:', { hour24, hours, period });

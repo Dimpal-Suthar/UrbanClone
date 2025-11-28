@@ -5,11 +5,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { locationService } from '@/services/locationService';
 import { Location } from '@/types/maps';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 /**
  * Provider Navigation Screen
@@ -73,18 +74,51 @@ export default function ProviderNavigationScreen() {
         console.log('🔍 Geocoding address:', addressString);
         
         try {
-          const geocodedLocation = await locationService.geocodeAddress(addressString);
-          if (geocodedLocation) {
-            console.log('✅ Geocoded location:', geocodedLocation);
-            setCustomerLocation(geocodedLocation);
+          // Request location permission before geocoding (required on some platforms)
+          const hasPermission = await requestPermissionWithAlert(
+            'location',
+            locationService.requestPermissions,
+            undefined, // We'll handle geocoding after permission check
+            'Location permission is needed to convert the address to coordinates for navigation.'
+          );
+
+          if (hasPermission) {
+            // Permission granted, proceed with geocoding
+            const geocodedLocation = await locationService.geocodeAddress(addressString);
+            if (geocodedLocation) {
+              console.log('✅ Geocoded location:', geocodedLocation);
+              setCustomerLocation(geocodedLocation);
+            } else {
+              console.error('❌ Failed to geocode address');
+              Alert.alert(
+                'Navigation Unavailable',
+                'Unable to get location from address. Please ensure the booking has a valid address with coordinates.',
+                [{ text: 'OK' }]
+              );
+            }
           } else {
-            console.error('❌ Failed to geocode address');
+            // Permission denied
+            Alert.alert(
+              'Permission Required',
+              'Location permission is required to convert the address to coordinates. Please grant permission in Settings.',
+              [{ text: 'OK' }]
+            );
           }
         } catch (error) {
           console.error('❌ Geocoding error:', error);
+          Alert.alert(
+            'Error',
+            'Failed to convert address to location. Please try again or contact support.',
+            [{ text: 'OK' }]
+          );
         }
       } else {
         console.error('❌ No address data in booking');
+        Alert.alert(
+          'Navigation Unavailable',
+          'No address information found for this booking.',
+          [{ text: 'OK' }]
+        );
       }
 
       // Format address

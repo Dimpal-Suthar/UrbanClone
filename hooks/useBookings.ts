@@ -6,8 +6,10 @@ import {
   createBooking,
   getAllBookings,
   getBookingById,
+  getCustomerBookingCount,
   getCustomerBookings,
   getCustomerBookingsByStatus,
+  getProviderBookingCount,
   getProviderBookings,
   getProviderBookingsByStatus,
   markOnTheWay,
@@ -21,6 +23,46 @@ import { Booking, BookingStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, doc, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useEffect } from 'react';
+
+/**
+ * Hook to get count of customer bookings by status (optimized using getCountFromServer)
+ * Use this for badge counts instead of fetching all bookings
+ */
+export const useCustomerBookingCount = (
+  customerId: string | null,
+  statuses: BookingStatus[]
+) => {
+  return useQuery({
+    queryKey: ['customer-booking-count', customerId, statuses],
+    queryFn: () => {
+      if (!customerId || statuses.length === 0) return 0;
+      return getCustomerBookingCount(customerId, statuses);
+    },
+    enabled: !!customerId && statuses.length > 0,
+    staleTime: 30000, // Cache for 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  });
+};
+
+/**
+ * Hook to get count of provider bookings by status (optimized using getCountFromServer)
+ * Use this for badge counts instead of fetching all bookings
+ */
+export const useProviderBookingCount = (
+  providerId: string | null,
+  statuses: BookingStatus[]
+) => {
+  return useQuery({
+    queryKey: ['provider-booking-count', providerId, statuses],
+    queryFn: () => {
+      if (!providerId || statuses.length === 0) return 0;
+      return getProviderBookingCount(providerId, statuses);
+    },
+    enabled: !!providerId && statuses.length > 0,
+    staleTime: 30000, // Cache for 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  });
+};
 
 /**
  * Hook to get a single booking by ID with real-time updates
@@ -223,6 +265,8 @@ export const useCreateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };
@@ -242,6 +286,8 @@ export const useUpdateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };
@@ -268,6 +314,8 @@ export const useUpdateBookingStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };
@@ -295,6 +343,8 @@ export const useCancelBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };
@@ -366,6 +416,8 @@ export const useCompleteBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };
@@ -411,6 +463,8 @@ export const useRescheduleBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['all-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['available-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-booking-count'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-booking-count'] });
     },
   });
 };

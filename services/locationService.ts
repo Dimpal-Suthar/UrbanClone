@@ -152,15 +152,22 @@ class LocationService {
 
   /**
    * Forward geocode - convert address to coordinates
-   * Checks permission first to avoid errors
+   * Requests permission if needed (required on some platforms for geocoding)
    */
   async geocodeAddress(address: string): Promise<LocationType | null> {
     try {
       // Check permission first
-      const permission = await Location.getForegroundPermissionsAsync();
+      let permission = await Location.getForegroundPermissionsAsync();
+      
+      // Request permission if not granted
       if (permission.status !== 'granted') {
-        console.log('⚠️ Location permission not granted, cannot geocode address');
-        return null;
+        console.log('⚠️ Location permission not granted, requesting...');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('⚠️ Location permission denied, cannot geocode address');
+          return null;
+        }
+        console.log('✅ Location permission granted');
       }
 
       const result = await Location.geocodeAsync(address);

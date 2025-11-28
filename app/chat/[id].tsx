@@ -259,127 +259,127 @@ const ChatDetailScreen = observer(() => {
     <Container safeArea edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={'padding'} style={{ flex: 1 }} keyboardVerticalOffset={0}>
         <View style={{ flex: 1 }}>
-          {/* Header */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
-              backgroundColor: colors.background,
-            }}
-          >
-            <Pressable onPress={() => router.back()} className="mr-3 active:opacity-70">
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </Pressable>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.background,
+          }}
+        >
+          <Pressable onPress={() => router.back()} className="mr-3 active:opacity-70">
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </Pressable>
 
             <Avatar uri={otherParticipant.photo} name={otherParticipant.name} size={40} />
 
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}
-                numberOfLines={1}
-              >
-                {otherParticipant.name}
-              </Text>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: colors.text,
+              }}
+              numberOfLines={1}
+            >
+              {otherParticipant.name}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: colors.success,
+                  marginRight: 4,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  textTransform: 'capitalize',
                 }}
               >
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: colors.success,
-                    marginRight: 4,
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: colors.textSecondary,
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {otherParticipant.role}
-                </Text>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {/* Call Button - Only show if phone number exists */}
-              {otherParticipant?.phone && (
-                <Pressable
-                  onPress={() => handleCall(otherParticipant.phone)}
-                  className="w-10 h-10 rounded-full items-center justify-center active:opacity-70"
-                  style={{ backgroundColor: `${colors.primary}15` }}
-                >
-                  <Ionicons name="call" size={20} color={colors.primary} />
-                </Pressable>
-              )}
+                {otherParticipant.role}
+              </Text>
             </View>
           </View>
 
-          {/* Messages List */}
-          {isLoading ? (
-            <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text className="text-sm mt-4" style={{ color: colors.textSecondary }}>
-                Loading messages...
-              </Text>
-            </View>
-          ) : messages.length === 0 ? (
-            <View className="flex-1 items-center justify-center px-6">
-              <Ionicons name="chatbubble-outline" size={64} color={colors.textSecondary} />
-              <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
-                No messages yet
-              </Text>
-              <Text className="text-sm mt-2 text-center" style={{ color: colors.textSecondary }}>
-                Send a message to start the conversation
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              keyExtractor={(item) => item.id}
-              renderItem={renderMessage}
-              inverted // Show latest messages at bottom
-              onEndReached={handleLoadMore}
-              onEndReachedThreshold={0.5}
-              ListFooterComponent={renderFooter}
+          {/* Action Buttons */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {/* Call Button - Only show if phone number exists */}
+            {otherParticipant?.phone && (
+              <Pressable
+                onPress={() => handleCall(otherParticipant.phone)}
+                className="w-10 h-10 rounded-full items-center justify-center active:opacity-70"
+                style={{ backgroundColor: `${colors.primary}15` }}
+              >
+                <Ionicons name="call" size={20} color={colors.primary} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Messages List */}
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text className="text-sm mt-4" style={{ color: colors.textSecondary }}>
+              Loading messages...
+            </Text>
+          </View>
+        ) : messages.length === 0 ? (
+          <View className="flex-1 items-center justify-center px-6">
+            <Ionicons name="chatbubble-outline" size={64} color={colors.textSecondary} />
+            <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
+              No messages yet
+            </Text>
+            <Text className="text-sm mt-2 text-center" style={{ color: colors.textSecondary }}>
+              Send a message to start the conversation
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMessage}
+            inverted // Show latest messages at bottom
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={renderFooter}
               contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
               style={{ flex: 1 }}
-              showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="never"
               keyboardDismissMode="on-drag"
               onScrollBeginDrag={() => {
                 Keyboard.dismiss();
               }}
-            />
-          )}
+          />
+        )}
 
-          {/* Typing Indicator */}
-          {isTyping && <TypingIndicator userName={otherParticipant.name} />}
+        {/* Typing Indicator */}
+        {isTyping && <TypingIndicator userName={otherParticipant.name} />}
         </View>
 
         {/* Chat Input */}
-        <ChatInput
-          onSend={handleSendMessage}
-          placeholder={`Message ${otherParticipant.name}...`}
+          <ChatInput
+            onSend={handleSendMessage}
+            placeholder={`Message ${otherParticipant.name}...`}
           disabled={false}
-          onTypingChange={handleTypingChange}
-        />
+            onTypingChange={handleTypingChange}
+          />
 
         {/* Image Viewer Modal */}
         {selectedImage && (

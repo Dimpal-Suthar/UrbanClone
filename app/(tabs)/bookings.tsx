@@ -2,7 +2,7 @@ import { BookingListCard } from '@/components/BookingListCard';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useCustomerBookings } from '@/hooks/useBookings';
+import { useCustomerBookingCount, useCustomerBookings } from '@/hooks/useBookings';
 import { BookingStatus } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -20,6 +20,20 @@ export default function BookingsScreen() {
   // Fetch user's bookings
   const { data: bookings = [], isLoading } = useCustomerBookings(user?.uid || null);
 
+  // Get optimized counts for each tab (using getCountFromServer)
+  const { data: upcomingCount = 0 } = useCustomerBookingCount(
+    user?.uid || null,
+    ['pending', 'accepted', 'confirmed', 'on-the-way', 'in-progress']
+  );
+  const { data: completedCount = 0 } = useCustomerBookingCount(
+    user?.uid || null,
+    ['completed']
+  );
+  const { data: cancelledCount = 0 } = useCustomerBookingCount(
+    user?.uid || null,
+    ['cancelled', 'rejected']
+  );
+
   // Filter bookings based on active tab
   const filteredBookings = bookings.filter((booking) => {
     switch (activeTab) {
@@ -33,6 +47,20 @@ export default function BookingsScreen() {
         return true;
     }
   });
+
+  // Get counts for each tab (using optimized counts)
+  const getBookingCount = (tab: string) => {
+    switch (tab) {
+      case 'Upcoming':
+        return upcomingCount;
+      case 'Completed':
+        return completedCount;
+      case 'Cancelled':
+        return cancelledCount;
+      default:
+        return 0;
+    }
+  };
 
   const getStatusColor = (status: BookingStatus) => {
     switch (status) {
@@ -99,26 +127,46 @@ export default function BookingsScreen() {
 
         {/* Tabs */}
         <View className="flex-row px-6 mb-4">
-        {BOOKING_TABS.map((tab) => (
-          <Pressable
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className="mr-4 pb-2"
-            style={{
-              borderBottomWidth: activeTab === tab ? 2 : 0,
-              borderBottomColor: colors.primary,
-            }}
-          >
-            <Text
-              className="font-semibold"
+        {BOOKING_TABS.map((tab) => {
+          const count = getBookingCount(tab);
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className="mr-4 pb-2 flex-row items-center"
               style={{
-                color: activeTab === tab ? colors.primary : colors.textSecondary,
+                borderBottomWidth: activeTab === tab ? 2 : 0,
+                borderBottomColor: colors.primary,
               }}
             >
-              {tab}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className="font-semibold"
+                style={{
+                  color: activeTab === tab ? colors.primary : colors.textSecondary,
+                }}
+              >
+                {tab}
+              </Text>
+              {count > 0 && (
+                <View
+                  className="ml-2 px-2 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: activeTab === tab ? colors.primary : colors.surface,
+                  }}
+                >
+                  <Text
+                    className="text-xs font-bold"
+                    style={{
+                      color: activeTab === tab ? '#FFFFFF' : colors.text,
+                    }}
+                  >
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
 
         {/* Bookings List */}
