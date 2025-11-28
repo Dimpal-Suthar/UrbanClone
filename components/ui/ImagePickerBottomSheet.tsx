@@ -1,9 +1,9 @@
 import { useTheme } from '@/contexts/ThemeContext';
-import { showFailedMessage } from '@/utils/toast';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, Text, View } from 'react-native';
 
 interface ImagePickerBottomSheetProps {
   visible: boolean;
@@ -20,18 +20,32 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  const requestPermissions = async () => {
-    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-    const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
-      showFailedMessage(
-        'Permission Required',
-        'Camera and photo library permissions are required to upload images.'
-      );
-      return false;
-    }
-    return true;
+  const requestPermissions = async (): Promise<boolean> => {
+    // Request camera permission
+    const cameraGranted = await requestPermissionWithAlert(
+      'camera',
+      async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        return status === 'granted';
+      },
+      undefined,
+      'Camera permission is needed to take photos.'
+    );
+
+    if (!cameraGranted) return false;
+
+    // Request media library permission
+    const libraryGranted = await requestPermissionWithAlert(
+      'mediaLibrary',
+      async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        return status === 'granted';
+      },
+      undefined,
+      'Photo library permission is needed to select images.'
+    );
+
+    return libraryGranted;
   };
 
   const openCamera = async () => {
@@ -52,7 +66,7 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
       }
     } catch (error) {
       console.error('Camera error:', error);
-      showFailedMessage('Error', 'Failed to take photo. Please try again.');
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -74,7 +88,7 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
       }
     } catch (error) {
       console.error('Gallery error:', error);
-      showFailedMessage('Error', 'Failed to select image. Please try again.');
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 

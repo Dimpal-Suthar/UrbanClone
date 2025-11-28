@@ -3,13 +3,14 @@ import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { getAuthErrorMessage } from '@/utils/authErrors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Formik } from 'formik';
-import * as Yup from 'yup';
 import { observer } from 'mobx-react-lite';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import * as Yup from 'yup';
 
 const ForgotPasswordScreen = observer(() => {
   const router = useRouter();
@@ -49,7 +50,7 @@ const ForgotPasswordScreen = observer(() => {
                 );
                 resetForm();
               } catch (err: any) {
-                setFormError(err?.message || 'Failed to send reset email. Please try again.');
+                setFormError(getAuthErrorMessage(err));
               } finally {
                 setSubmitting(false);
               }

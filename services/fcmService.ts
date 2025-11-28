@@ -26,17 +26,26 @@ Notifications.setNotificationHandler({
 
 /**
  * Request notification permissions
+ * Returns true if granted, false if denied
+ * Handles permission denial gracefully without throwing errors
  */
 export const requestNotificationPermissions = async (): Promise<boolean> => {
   try {
     // Allow in simulator/Expo Go for development
     console.log('🔔 Device check:', Device.isDevice);
     
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    console.log('🔔 Existing permission status:', existingStatus);
+    const { status: existingStatus, canAskAgain } = await Notifications.getPermissionsAsync();
+    console.log('🔔 Existing permission status:', existingStatus, 'canAskAgain:', canAskAgain);
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
+      // Check if permission is permanently denied
+      if (existingStatus === 'denied' && !canAskAgain) {
+        console.log('⚠️ Notification permission permanently denied');
+        // Don't show alert here - let the calling code handle it
+        return false;
+      }
+
       console.log('🔔 Requesting permissions...');
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
@@ -44,7 +53,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('❌ Permission not granted');
+      console.log('❌ Permission not granted (status:', finalStatus, ')');
       return false;
     }
 
@@ -52,6 +61,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('❌ Error requesting notification permissions:', error);
+    // Gracefully handle errors - don't throw, just return false
     return false;
   }
 };
@@ -235,12 +245,16 @@ export const removeFCMToken = async (
 };
 
 /**
- * Remove all device tokens for current device on logout
+ * Remove all device tokens for current device on logout or when notifications are disabled
  * Clears both deviceTokens array and fcmToken/apnsToken fields
+ * 
+ * @param userId - User ID
+ * @param clearAllTokens - If true, clears ALL tokens for the user (for notification disable).
+ *                        If false, only removes current device's tokens (for logout).
  */
-export const removeAllDeviceTokens = async (userId: string): Promise<void> => {
+export const removeAllDeviceTokens = async (userId: string, clearAllTokens: boolean = false): Promise<void> => {
   try {
-    console.log('🔔 removeAllDeviceTokens called for userId:', userId);
+    console.log('🔔 removeAllDeviceTokens called for userId:', userId, 'clearAllTokens:', clearAllTokens);
     const userRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userRef);
 
@@ -250,46 +264,55 @@ export const removeAllDeviceTokens = async (userId: string): Promise<void> => {
       console.log('🔔 Current apnsToken in DB:', data.apnsToken);
       console.log('🔔 Current deviceTokens:', data.deviceTokens);
       
-      // Get current device tokens
-      const expoToken = await getExpoPushToken();
-      const nativeToken = await getNativePushToken();
-      
-      console.log('🔔 Current device Expo token:', expoToken);
-      console.log('🔔 Current device native token:', nativeToken);
-      
-      const tokens = data.deviceTokens || [];
-      
-      // Remove current device's Expo token from array
-      const updatedTokens = expoToken 
-        ? tokens.filter((t: string) => t !== expoToken)
-        : tokens;
-
-      // Prepare update - clear all device-specific tokens
+      // Prepare update
       const update: any = {
-        deviceTokens: updatedTokens.length > 0 ? updatedTokens : [],
         updatedAt: serverTimestamp(),
       };
       
-      // CRITICAL: Always clear fcmToken and apnsToken if they exist
-      // We clear them regardless of match because on logout, we want to remove
-      // all tokens for this device, and if there's a token stored, it's likely from this device
-      if (data.fcmToken) {
+      if (clearAllTokens) {
+        // When disabling notifications, clear ALL tokens (user won't receive notifications on any device)
+        update.deviceTokens = [];
         update.fcmToken = null;
-        console.log('🔔 Clearing fcmToken field on logout:', data.fcmToken);
-      }
-      if (data.apnsToken) {
         update.apnsToken = null;
-        console.log('🔔 Clearing apnsToken field on logout:', data.apnsToken);
+        console.log('🔔 Clearing ALL tokens (notifications disabled)');
+      } else {
+        // When logging out, only remove current device's tokens
+        const expoToken = await getExpoPushToken();
+        const nativeToken = await getNativePushToken();
+        
+        console.log('🔔 Current device Expo token:', expoToken);
+        console.log('🔔 Current device native token:', nativeToken);
+        
+        const tokens = data.deviceTokens || [];
+        
+        // Remove current device's Expo token from array
+        const updatedTokens = expoToken 
+          ? tokens.filter((t: string) => t !== expoToken)
+          : tokens;
+
+        update.deviceTokens = updatedTokens.length > 0 ? updatedTokens : [];
+        
+        // Clear native tokens if they match current device (best effort)
+        // Note: We can't reliably match native tokens, so we clear them if they exist
+        // This is safe because tokens will be re-registered on next login if needed
+        if (data.fcmToken) {
+          update.fcmToken = null;
+          console.log('🔔 Clearing fcmToken field on logout:', data.fcmToken);
+        }
+        if (data.apnsToken) {
+          update.apnsToken = null;
+          console.log('🔔 Clearing apnsToken field on logout:', data.apnsToken);
+        }
       }
 
       console.log('🔔 Updating user document with:', update);
       await updateDoc(userRef, update);
-      console.log('✅ All device tokens removed successfully on logout');
+      console.log('✅ Device tokens removed successfully');
     } else {
       console.warn('⚠️ User document does not exist, cannot remove tokens');
     }
   } catch (error) {
-    console.error('❌ Error removing all device tokens:', error);
+    console.error('❌ Error removing device tokens:', error);
     throw error;
   }
 };

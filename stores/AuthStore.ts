@@ -1,5 +1,6 @@
 import { auth, db } from '@/config/firebase';
 import authService, { UserProfile } from '@/services/authService';
+import { getAuthErrorMessage } from '@/utils/authErrors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, Unsubscribe } from 'firebase/firestore';
@@ -295,7 +296,7 @@ export class AuthStore {
     } catch (error: any) {
       console.error('SignUp error:', error.message);
       runInAction(() => {
-        this.error = error.message;
+        this.error = getAuthErrorMessage(error);
         this.loading = false;
       });
       throw error;
@@ -324,7 +325,7 @@ export class AuthStore {
     } catch (error: any) {
       console.error('SignIn error:', error.message);
       runInAction(() => {
-        this.error = error.message;
+        this.error = getAuthErrorMessage(error);
         this.loading = false;
       });
       throw error;
@@ -349,7 +350,7 @@ export class AuthStore {
     } catch (error: any) {
       console.error('ResetPassword error:', error.message);
       runInAction(() => {
-        this.error = error.message;
+        this.error = getAuthErrorMessage(error);
         this.loading = false;
       });
       throw error;
@@ -380,7 +381,7 @@ export class AuthStore {
       });
     } catch (error: any) {
       runInAction(() => {
-        this.error = error.message;
+        this.error = getAuthErrorMessage(error);
         this.loading = false;
       });
       throw error;
@@ -400,7 +401,7 @@ export class AuthStore {
       });
     } catch (error: any) {
       runInAction(() => {
-        this.error = error.message;
+        this.error = getAuthErrorMessage(error);
       });
       throw error;
     }

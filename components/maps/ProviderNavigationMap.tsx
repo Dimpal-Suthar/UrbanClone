@@ -3,7 +3,8 @@ import { GOOGLE_MAPS_CONFIG } from '@/config/maps';
 import { useTheme } from '@/contexts/ThemeContext';
 import { locationService } from '@/services/locationService';
 import { Location } from '@/types/maps';
-import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
+import { showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -145,21 +146,36 @@ export const ProviderNavigationMap: React.FC<ProviderNavigationMapProps> = ({
 
   const handleStartTracking = async () => {
     try {
-      const success = await locationService.startProviderTracking(bookingId, providerId);
-      
-      if (success) {
-        setIsTracking(true);
-        onTrackingStart?.();
-        showSuccessMessage('Success', 'Location tracking started');
-        
-        // Update location periodically
-        startLocationUpdates();
-      } else {
-        showFailedMessage('Error', 'Failed to start tracking. Please enable location access.');
+      // Request permission with automatic alert handling
+      const hasPermission = await requestPermissionWithAlert(
+        'location',
+        () => locationService.requestPermissions(),
+        async () => {
+          // Permission granted, start tracking
+          const success = await locationService.startProviderTracking(bookingId, providerId);
+          
+          if (success) {
+            setIsTracking(true);
+            onTrackingStart?.();
+            showSuccessMessage('Success', 'Location tracking started');
+            startLocationUpdates();
+          } else {
+            Alert.alert(
+              'Tracking Failed',
+              'Failed to start location tracking. Please ensure location services are enabled in your device settings.',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        'Location permission is required to start tracking.'
+      );
+
+      if (!hasPermission) {
+        return; // Permission denied, tracking not started
       }
     } catch (error) {
       console.error('Error starting tracking:', error);
-      showFailedMessage('Error', 'Failed to start tracking');
+      Alert.alert('Error', 'Failed to start tracking. Please try again.');
     }
   };
 

@@ -3,6 +3,7 @@ import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { getAuthErrorMessage } from '@/utils/authErrors';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { Formik } from 'formik';
@@ -109,7 +110,7 @@ const EmailAuthScreen = observer(() => {
                     router.replace('/(tabs)');
                   }
                 } catch (err: any) {
-                  setFormError(err?.message || 'Failed to create account. Please try again.');
+                  setFormError(getAuthErrorMessage(err));
                   setSubmitting(false);
                   setIsAuthenticating(false);
                 }
@@ -264,7 +265,7 @@ const EmailAuthScreen = observer(() => {
                   else if (profile?.role === 'provider') router.replace('/(provider)/(tabs)/dashboard' as any);
                   else router.replace('/(tabs)');
                 } catch (err: any) {
-                  setFormError(err?.message || 'Failed to sign in. Please try again.');
+                  setFormError(getAuthErrorMessage(err));
                   setSubmitting(false);
                   setIsAuthenticating(false);
                 }

@@ -3,10 +3,11 @@ import { GOOGLE_MAPS_CONFIG } from '@/config/maps';
 import { useTheme } from '@/contexts/ThemeContext';
 import { locationService } from '@/services/locationService';
 import { Address, Location } from '@/types/maps';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
 import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,9 +63,15 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
   const getCurrentLocation = async () => {
     setLoading(true);
     try {
-      const hasPermission = await locationService.requestPermissions();
+      const hasPermission = await requestPermissionWithAlert(
+        'location',
+        () => locationService.requestPermissions(),
+        undefined,
+        'Location access is needed to find your current location. You can still select a location manually on the map.'
+      );
+
       if (!hasPermission) {
-        console.log('Location permission denied, using default region');
+        console.log('⚠️ Location permission denied, using default region');
         setLoading(false);
         return;
       }
@@ -98,6 +105,15 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
 
   const updateAddressFromLocation = async (location: Location) => {
     try {
+      // Check permission before reverse geocoding (don't request, just check)
+      const hasPermission = await locationService.hasPermission();
+      if (!hasPermission) {
+        // Permission denied - set address from coordinates only
+        setAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
+        setSearchQuery('');
+        return;
+      }
+
       const geocoded = await locationService.reverseGeocode(location);
       if (geocoded) {
         const formattedAddress = [
@@ -112,9 +128,14 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
         
         setAddress(formattedAddress);
         setSearchQuery(formattedAddress);
+      } else {
+        // Fallback to coordinates if geocoding fails
+        setAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
       }
     } catch (error) {
       console.error('Error reverse geocoding:', error);
+      // Fallback to coordinates on error
+      setAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
     }
   };
 
@@ -126,6 +147,7 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
     
     setMarkerPosition(newLocation);
     setRegion(newRegion);
+    // Only update address if permission is granted (updateAddressFromLocation checks permission)
     await updateAddressFromLocation(newLocation);
   };
 
@@ -167,28 +189,45 @@ export const AddressMapPicker: React.FC<AddressMapPickerProps> = ({
   const handleConfirmLocation = async () => {
     setLoading(true);
     try {
-      const geocoded = await locationService.reverseGeocode(markerPosition);
-      
-      if (geocoded) {
-        const addressData: Address = {
-          street: `${geocoded.name || ''} ${geocoded.street || ''}`.trim(),
-          city: geocoded.city || geocoded.subregion || '',
-          state: geocoded.region || '',
-          pincode: geocoded.postalCode || '',
-          landmark: geocoded.district || '',
-          lat: markerPosition.latitude,
-          lng: markerPosition.longitude,
-          formattedAddress: address,
-        };
+      // Request permission when user tries to confirm location
+      const hasPermission = await requestPermissionWithAlert(
+        'location',
+        () => locationService.requestPermissions(),
+        undefined,
+        'Location permission is needed to get the address for this location.'
+      );
 
-        onAddressSelect(addressData, markerPosition);
-        showSuccessMessage('Success', 'Location confirmed');
-      } else {
-        showFailedMessage('Error', 'Could not get address details');
+      if (!hasPermission) {
+        setLoading(false);
+        return;
       }
+
+      // Try to get address, but allow confirmation even if geocoding fails
+      let geocoded = null;
+      try {
+        geocoded = await locationService.reverseGeocode(markerPosition);
+      } catch (error) {
+        console.error('Error reverse geocoding:', error);
+        // Continue without address details
+      }
+      
+      // Create address data - use geocoded data if available, otherwise use coordinates
+      const addressData: Address = {
+        street: geocoded ? `${geocoded.name || ''} ${geocoded.street || ''}`.trim() : '',
+        city: geocoded?.city || geocoded?.subregion || '',
+        state: geocoded?.region || '',
+        pincode: geocoded?.postalCode || '',
+        landmark: geocoded?.district || '',
+        lat: markerPosition.latitude,
+        lng: markerPosition.longitude,
+        formattedAddress: address || `${markerPosition.latitude.toFixed(6)}, ${markerPosition.longitude.toFixed(6)}`,
+      };
+
+      onAddressSelect(addressData, markerPosition);
+      showSuccessMessage('Success', 'Location confirmed');
     } catch (error) {
       console.error('Error confirming location:', error);
-      showFailedMessage('Error', 'Failed to confirm location');
+      Alert.alert('Error', 'Failed to confirm location. Please try again.');
     } finally {
       setLoading(false);
     }

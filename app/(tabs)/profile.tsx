@@ -6,11 +6,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomerBookings } from '@/hooks/useBookings';
 import { useRole } from '@/hooks/useRole';
-import { showInfoMessage } from '@/utils/toast';
+import { removeAllDeviceTokens } from '@/services/fcmService';
+import { getNotificationEnabled, setNotificationEnabled } from '@/services/notificationSettingsService';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
+import { showInfoMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 const MENU_ITEMS = [
@@ -26,7 +29,23 @@ const ProfileScreen = observer(() => {
   const { user, userProfile, signOut } = useAuth();
   const { isProvider, isAdmin } = useRole();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [loadingNotificationPref, setLoadingNotificationPref] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Load notification preference on mount
+  useEffect(() => {
+    const loadNotificationPreference = async () => {
+      try {
+        const enabled = await getNotificationEnabled();
+        setNotificationsEnabled(enabled);
+      } catch (error) {
+        console.error('Error loading notification preference:', error);
+      } finally {
+        setLoadingNotificationPref(false);
+      }
+    };
+    loadNotificationPreference();
+  }, []);
 
   // Fetch real user data
   const { data: customerBookings = [], isLoading: loadingBookings } = useCustomerBookings(user?.uid || null);
@@ -72,6 +91,55 @@ const ProfileScreen = observer(() => {
     }
     // Add navigation logic for other menu items
     showInfoMessage('Coming Soon', 'This feature will be available soon');
+  };
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    // Prevent multiple rapid toggles
+    if (loadingNotificationPref) return;
+    
+    try {
+      // Update state immediately for instant UI feedback
+      setNotificationsEnabled(enabled);
+      
+      // Save preference to storage
+      await setNotificationEnabled(enabled);
+      
+      if (!enabled && user?.uid) {
+        // When disabling, remove ALL tokens from Firestore for this user
+        // This prevents notifications from being sent to any device
+        try {
+          await removeAllDeviceTokens(user.uid, true); // clearAllTokens = true
+          showSuccessMessage('Notifications Disabled', 'You will no longer receive push notifications');
+        } catch (error) {
+          console.error('Error removing tokens:', error);
+          // Still show success since preference is saved
+          showSuccessMessage('Notifications Disabled', 'Preference saved');
+        }
+      } else if (enabled && user?.uid) {
+        // When enabling, check if notification permission is granted
+        const { requestNotificationPermissions } = await import('@/services/fcmService');
+        
+        const hasPermission = await requestPermissionWithAlert(
+          'notifications',
+          () => requestNotificationPermissions(),
+          () => {
+            showSuccessMessage('Notifications Enabled', 'You will receive push notifications');
+          },
+          'To receive push notifications, please grant notification permission when prompted.'
+        );
+
+        if (!hasPermission) {
+          // Revert toggle since permission is not granted
+          setNotificationsEnabled(false);
+          await setNotificationEnabled(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      // Revert state on error
+      setNotificationsEnabled(!enabled);
+      showInfoMessage('Error', 'Failed to update notification settings. Please try again.');
+    }
   };
 
   const displayName = userProfile?.displayName || user?.displayName || 'User';
@@ -183,17 +251,36 @@ const ProfileScreen = observer(() => {
           <Card variant="default" className="mb-3">
             <View className="flex-row items-center justify-between py-1">
               <View className="flex-row items-center flex-1">
-                <Ionicons name="notifications-outline" size={22} color={colors.text} />
-                <Text className="ml-3 text-base" style={{ color: colors.text }}>
-                  Push Notifications
-                </Text>
+                <Ionicons 
+                  name={notificationsEnabled ? 'notifications' : 'notifications-off-outline'} 
+                  size={22} 
+                  color={colors.text} 
+                />
+                <View className="ml-3 flex-1">
+                  <Text className="text-base" style={{ color: colors.text }}>
+                    Push Notifications
+                  </Text>
+                  {loadingNotificationPref ? (
+                    <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+                      Loading...
+                    </Text>
+                  ) : (
+                    <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+                      {notificationsEnabled ? 'Receiving notifications' : 'Notifications disabled'}
+                    </Text>
+                  )}
+                </View>
               </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-              />
+              {loadingNotificationPref ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleNotificationToggle}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              )}
             </View>
           </Card>
 

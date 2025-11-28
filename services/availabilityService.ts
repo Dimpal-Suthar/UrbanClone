@@ -244,11 +244,31 @@ const getDefaultAvailabilitySlots = (date: Date): AvailabilityCheckResult => {
     };
   }
   
-  console.log('  ✅ Returning default time slots');
+    // Filter out past slots if it's today
+    const now = new Date();
+    const isToday = checkDate.getTime() === today.getTime();
+    let filteredSlots = defaultTimeSlots;
+    
+    if (isToday) {
+      console.log('  ⏰ Filtering past slots for today...');
+      // Add a small buffer (1 minute) to account for any timing edge cases
+      const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
+      filteredSlots = defaultTimeSlots.filter(slot => {
+        const slotStartTime = parseSlotTime(slot, date);
+        const isPastSlot = slotStartTime <= bufferTime;
+        console.log(`    ${slot}: slotStartTime=${slotStartTime.toLocaleTimeString()}, now=${now.toLocaleTimeString()}, isPastSlot=${isPastSlot}`);
+        return slotStartTime > bufferTime;
+      });
+      console.log('  filteredSlots after time filtering:', filteredSlots);
+    }
+  
+  console.log('  ✅ Returning filtered time slots');
   return {
-    isAvailable: true,
-    availableSlots: defaultTimeSlots,
-    reason: 'Using default availability (provider hasn\'t set custom schedule)',
+    isAvailable: filteredSlots.length > 0,
+    availableSlots: filteredSlots,
+    reason: filteredSlots.length === 0 
+      ? 'No available slots remaining for today' 
+      : 'Using default availability (provider hasn\'t set custom schedule)',
   };
 };
 
@@ -361,11 +381,14 @@ export const getAvailableSlots = async (
     let filteredSlots = availableSlots;
     if (isToday) {
       console.log('  ⏰ Filtering past slots for today...');
+      // Add a small buffer (1 minute) to account for any timing edge cases
+      // This prevents issues where a slot might be filtered out if checked at the exact start time
+      const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
       filteredSlots = availableSlots.filter(slot => {
-        const slotStartTime = parseSlotTime(slot);
-        const isPastSlot = slotStartTime <= now;
-        console.log(`    ${slot}: slotStartTime=${slotStartTime.toLocaleTimeString()}, isPastSlot=${isPastSlot}`);
-        return slotStartTime > now;
+        const slotStartTime = parseSlotTime(slot, date);
+        const isPastSlot = slotStartTime <= bufferTime;
+        console.log(`    ${slot}: slotStartTime=${slotStartTime.toLocaleTimeString()}, now=${now.toLocaleTimeString()}, isPastSlot=${isPastSlot}`);
+        return slotStartTime > bufferTime;
       });
       console.log('  filteredSlots after time filtering:', filteredSlots);
     }
@@ -391,22 +414,52 @@ const getDayOfWeek = (date: Date): DayOfWeek => {
 
 /**
  * Helper: Parse slot time to Date object for comparison
+ * @param slot - The time slot string (e.g., "09:00 AM - 10:00 AM")
+ * @param date - The date to set the time on (defaults to today)
+ * @returns Date object with the slot start time on the specified date
  */
-const parseSlotTime = (slot: TimeSlot): Date => {
-  const startTime = slot.split(' - ')[0];
-  const [time, period] = startTime.split(' ');
-  const [hours, minutes] = time.split(':').map(Number);
-  
-  let hour24 = hours;
-  if (period === 'PM' && hours !== 12) {
-    hour24 = hours + 12;
-  } else if (period === 'AM' && hours === 12) {
-    hour24 = 0;
+const parseSlotTime = (slot: TimeSlot, date: Date = new Date()): Date => {
+  try {
+    const startTime = slot.split(' - ')[0].trim();
+    const [time, period] = startTime.split(' ');
+    
+    if (!time || !period) {
+      console.error('❌ Invalid slot format:', slot);
+      // Return a far future date to prevent filtering issues
+      return new Date('2099-12-31');
+    }
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    // Validate parsed values
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 12 || minutes < 0 || minutes > 59) {
+      console.error('❌ Invalid time values:', { hours, minutes, slot });
+      return new Date('2099-12-31');
+    }
+    
+    let hour24 = hours;
+    if (period.toUpperCase() === 'PM' && hours !== 12) {
+      hour24 = hours + 12;
+    } else if (period.toUpperCase() === 'AM' && hours === 12) {
+      hour24 = 0;
+    }
+    
+    // Validate 24-hour format
+    if (hour24 < 0 || hour24 > 23) {
+      console.error('❌ Invalid 24-hour format:', { hour24, hours, period });
+      return new Date('2099-12-31');
+    }
+    
+    // Create a new date object with the selected date and set the time
+    // Use a fresh date copy to avoid mutating the original
+    const slotDateTime = new Date(date);
+    slotDateTime.setHours(hour24, minutes, 0, 0);
+    return slotDateTime;
+  } catch (error) {
+    console.error('❌ Error parsing slot time:', error, slot);
+    // Return a far future date to prevent filtering issues
+    return new Date('2099-12-31');
   }
-  
-  const now = new Date();
-  now.setHours(hour24, minutes, 0, 0);
-  return now;
 };
 
 /**

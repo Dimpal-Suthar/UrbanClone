@@ -20,8 +20,8 @@ import { BookingStatus } from '@/types';
 import { makeCall } from '@/utils/callHelpers';
 import { showFailedMessage, showSuccessMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -38,35 +38,73 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BookingDetailScreen() {
-  const { id, fromBookingFlow } = useLocalSearchParams();
+  const { id, fromBookingFlow, fromAdmin } = useLocalSearchParams();
   const router = useRouter();
+  const segments = useSegments();
   const { colors } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   
+  // Track navigation state to prevent multiple rapid clicks
+  const isNavigatingRef = useRef(false);
+  
+  // Detect if we're in admin context
+  // Primary check: fromAdmin param passed explicitly
+  // Fallback check: segments contain "(admin)" (more specific to avoid false positives)
+  const isFromAdmin = fromAdmin === 'true' || segments.some(seg => seg === '(admin)');
+  
   // Handle hardware back button
   useEffect(() => {
-    if (fromBookingFlow === 'true') {
-      const onBackPress = () => {
-        // Use navigate instead of replace to unwind the stack to the tabs
-        router.navigate('/(tabs)/bookings');
+    const onBackPress = () => {
+      // Prevent multiple rapid clicks
+      if (isNavigatingRef.current) {
+        return true; // Already navigating, prevent default
+      }
+      
+      if (fromBookingFlow === 'true') {
+        isNavigatingRef.current = true;
+        router.replace('/(tabs)/bookings');
         return true;
-      };
+      } else if (isFromAdmin) {
+        isNavigatingRef.current = true;
+        // Navigate to admin bookings using push with proper path
+        router.push('/(admin)/bookings');
+        return true;
+      }
+      return false; // Let default back behavior handle it
+    };
 
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
-      return () => backHandler.remove();
-    }
-  }, [fromBookingFlow, router]);
+    return () => backHandler.remove();
+  }, [fromBookingFlow, isFromAdmin, router]);
   
-  // Handle back button - if coming from booking flow, go to bookings tab
+  // Handle back button - navigate to correct screen based on source
   const handleBackPress = () => {
+    // Prevent multiple rapid clicks
+    if (isNavigatingRef.current) {
+      return;
+    }
+    
+    // Set navigating flag
+    isNavigatingRef.current = true;
+    
     if (fromBookingFlow === 'true') {
-      // Use navigate instead of replace to unwind the stack to the tabs
-      router.navigate('/(tabs)/bookings');
+      // Coming from customer booking flow
+      router.replace('/(tabs)/bookings');
+    } else if (isFromAdmin) {
+      // Coming from admin bookings - navigate explicitly to prevent cross-role navigation
+      router.push('/(admin)/bookings');
     } else {
+      // Default: go back in navigation stack
       router.back();
     }
+    
+    // Reset flag after a short delay to allow navigation to complete
+    // This prevents rapid clicks but allows navigation if user comes back to this screen
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1000);
   };
 
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -764,7 +802,7 @@ export default function BookingDetailScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Button title="Cancel Booking" onPress={handleCancelBooking} />
+                  <Button title="Cancel" onPress={handleCancelBooking} />
                 </View>
               </View>
             </Card>

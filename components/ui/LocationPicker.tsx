@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useTheme } from '@/contexts/ThemeContext';
 import { BookingAddress } from '@/types';
-import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
+import { requestPermissionWithAlert } from '@/utils/permissionUtils';
+import { showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useState } from 'react';
 import {
+  Alert,
   Modal,
   Pressable,
   Text,
@@ -31,13 +33,18 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     try {
       setLoading(true);
 
-      // Request permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        showFailedMessage(
-          'Permission Required',
-          'Location permission is required to use this feature. Please enable it in settings.'
-        );
+      // Request permission with automatic alert handling
+      const hasPermission = await requestPermissionWithAlert(
+        'location',
+        async () => {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          return status === 'granted';
+        },
+        undefined,
+        'Location permission is required to detect your current location.'
+      );
+
+      if (!hasPermission) {
         setLoading(false);
         return;
       }
@@ -68,11 +75,11 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         onLocationSelect(locationData);
         showSuccessMessage('Success', 'Location detected successfully');
       } else {
-        showFailedMessage('Error', 'Could not get address details. Please try again.');
+        Alert.alert('Error', 'Could not get address details. Please try again.');
       }
     } catch (error) {
       console.error('Error getting location:', error);
-      showFailedMessage('Error', 'Failed to get current location. Please enter manually.');
+      Alert.alert('Error', 'Failed to get current location. Please enter manually or pick from map.');
     } finally {
       setLoading(false);
     }

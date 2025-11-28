@@ -1,7 +1,18 @@
 import { ConfigContext, ExpoConfig } from '@expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  // Google Maps API key must be provided via environment variable
+  // Set it using: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY
+  // Or set it in your local .env file for development
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  if (!googleMapsApiKey) {
+    throw new Error(
+      'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is required. ' +
+      'Please set it as an EAS secret or in your environment variables. ' +
+      'Run: eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value YOUR_API_KEY'
+    );
+  }
 
   return {
     ...config,

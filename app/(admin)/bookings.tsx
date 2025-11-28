@@ -84,7 +84,13 @@ const AdminBookingsScreen = observer(() => {
 
   const renderBookingItem = ({ item: booking }: { item: typeof filteredBookings[0] }) => (
     <Pressable
-      onPress={() => router.push(`/booking/${booking.id}`)}
+      onPress={() => {
+        // Navigate to booking details with admin context
+        router.push({
+          pathname: '/booking/[id]' as any,
+          params: { id: booking.id, fromAdmin: 'true' }
+        });
+      }}
       className="mb-3 active:opacity-70"
       style={{ paddingHorizontal: 24 }}
     >

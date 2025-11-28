@@ -18,20 +18,51 @@ class LocationService {
   private currentBookingId: string | null = null;
 
   /**
+   * Check if location permission is granted (without requesting)
+   */
+  async hasPermission(): Promise<boolean> {
+    try {
+      const permission = await Location.getForegroundPermissionsAsync();
+      return permission.status === 'granted';
+    } catch (error) {
+      console.error('Error checking location permission:', error);
+      return false;
+    }
+  }
+
+  /**
    * Request foreground location permissions (for customer/admin app)
+   * Handles permission denial gracefully
    */
   async requestPermissions(): Promise<boolean> {
     try {
+      // Check existing permission status first
+      const existingPermission = await Location.getForegroundPermissionsAsync();
+      
+      // If permanently denied, return false (don't request again)
+      if (existingPermission.status === 'denied' && !existingPermission.canAskAgain) {
+        console.log('⚠️ Location permission permanently denied');
+        return false;
+      }
+
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-      return foregroundStatus === 'granted';
+      
+      if (foregroundStatus !== 'granted') {
+        console.log('⚠️ Location permission denied (status:', foregroundStatus, ')');
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      console.error('Error requesting location permissions:', error);
+      console.error('❌ Error requesting location permissions:', error);
+      // Gracefully handle errors - don't throw, just return false
       return false;
     }
   }
 
   /**
    * Request background location permissions (for provider app only)
+   * Handles permission denial gracefully
    */
   async requestBackgroundPermissions(): Promise<boolean> {
     try {
@@ -39,12 +70,27 @@ class LocationService {
       const foregroundPermission = await Location.getForegroundPermissionsAsync();
       
       if (foregroundPermission.status !== 'granted') {
+        // Check if permanently denied
+        if (foregroundPermission.status === 'denied' && !foregroundPermission.canAskAgain) {
+          console.log('⚠️ Foreground location permission permanently denied');
+          return false;
+        }
+
         // Request foreground permission first
         const { status: newForegroundStatus } = await Location.requestForegroundPermissionsAsync();
         if (newForegroundStatus !== 'granted') {
           console.log('⚠️ Foreground location permission not granted');
           return false;
         }
+      }
+
+      // Check existing background permission
+      const existingBackgroundPermission = await Location.getBackgroundPermissionsAsync();
+      
+      // If permanently denied, return false
+      if (existingBackgroundPermission.status === 'denied' && !existingBackgroundPermission.canAskAgain) {
+        console.log('⚠️ Background location permission permanently denied');
+        return false;
       }
 
       // Request background permission
@@ -59,6 +105,7 @@ class LocationService {
       }
     } catch (error) {
       console.error('❌ Error requesting background location permissions:', error);
+      // Gracefully handle errors - don't throw, just return false
       return false;
     }
   }
@@ -84,9 +131,17 @@ class LocationService {
 
   /**
    * Reverse geocode - convert coordinates to address
+   * Checks permission first to avoid errors
    */
   async reverseGeocode(location: LocationType): Promise<Location.LocationGeocodedAddress | null> {
     try {
+      // Check permission first
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        console.log('⚠️ Location permission not granted, cannot reverse geocode');
+        return null;
+      }
+
       const result = await Location.reverseGeocodeAsync(location);
       return result[0] || null;
     } catch (error) {
@@ -97,9 +152,17 @@ class LocationService {
 
   /**
    * Forward geocode - convert address to coordinates
+   * Checks permission first to avoid errors
    */
   async geocodeAddress(address: string): Promise<LocationType | null> {
     try {
+      // Check permission first
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        console.log('⚠️ Location permission not granted, cannot geocode address');
+        return null;
+      }
+
       const result = await Location.geocodeAsync(address);
       if (result.length > 0) {
         return {
@@ -153,6 +216,12 @@ class LocationService {
       const foregroundPermission = await Location.getForegroundPermissionsAsync();
       
       if (foregroundPermission.status !== 'granted') {
+        // Check if permanently denied
+        if (foregroundPermission.status === 'denied' && !foregroundPermission.canAskAgain) {
+          console.error('❌ Foreground location permission permanently denied - cannot start tracking');
+          return false;
+        }
+
         // Request foreground permission
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
