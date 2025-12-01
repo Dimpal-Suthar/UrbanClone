@@ -188,7 +188,11 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
             className="mt-6 py-4 rounded-2xl items-center active:opacity-70"
             style={{ backgroundColor: colors.background }}
           >
-            <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+            <Text 
+              numberOfLines={1}
+              className="text-lg font-semibold" 
+              style={{ color: colors.text }}
+            >
               Cancel
             </Text>
           </Pressable>

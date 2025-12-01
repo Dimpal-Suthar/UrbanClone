@@ -74,6 +74,7 @@ export function Button({
           flexDirection: 'row',
           backgroundColor: getBackgroundColor(),
           minHeight: 48,
+          flexShrink: 0,
         },
         getPadding(),
         borderStyle,
@@ -91,15 +92,18 @@ export function Button({
               name={icon as any} 
               size={size === 'sm' ? 16 : size === 'lg' ? 20 : 18} 
               color={getTextColor()} 
-              style={{ marginRight: 8 }}
+              style={{ marginRight: 8, flexShrink: 0 }}
             />
           )}
           <Text 
+            numberOfLines={1}
             style={{ 
               fontWeight: '600', 
               fontSize: size === 'sm' ? 14 : size === 'lg' ? 18 : 16,
               color: getTextColor()
             }}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.8}
           >
             {title}
           </Text>

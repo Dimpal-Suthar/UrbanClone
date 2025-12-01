@@ -382,17 +382,21 @@ export const ServiceOfferingModal: React.FC<ServiceOfferingModalProps> = ({
             )}
           </View>
 
-          <View className="h-6" />
+          <View className="h-0" />
           
           {/* Footer */}
-          <View className="px-6 pt-6" style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom + 8, 8) }}>
+          <View className="pt-6" style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom + 8, 8) }}>
             <View className="flex-row gap-3">
               <Pressable
                 onPress={onClose}
                 className="flex-1 py-4 rounded-2xl items-center justify-center active:opacity-70"
                 style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}
               >
-                <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+                <Text 
+                  numberOfLines={1}
+                  className="text-lg font-semibold" 
+                  style={{ color: colors.text }}
+                >
                   Cancel
                 </Text>
               </Pressable>
