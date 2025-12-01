@@ -1,8 +1,8 @@
-import { setGlobalOptions, logger } from 'firebase-functions/v2';
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { logger, setGlobalOptions } from 'firebase-functions/v2';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 
 setGlobalOptions({ region: 'us-central1', memory: '256MiB', timeoutSeconds: 60 });
 
@@ -10,22 +10,40 @@ try { initializeApp(); } catch {}
 const db = getFirestore();
 const messaging = getMessaging();
 
-async function getUserFcmTokens(userId: string): Promise<string[]> {
+/**
+ * OPTIMIZED: Get all tokens for a user in a single read
+ * Returns both FCM and Expo tokens from one Firestore document read
+ */
+async function getUserTokens(userId: string): Promise<{ fcmTokens: string[]; expoTokens: string[] }> {
   const snap = await db.collection('users').doc(userId).get();
-  if (!snap.exists) return [];
+  if (!snap.exists) return { fcmTokens: [], expoTokens: [] };
+  
   const data = (snap.data() || {}) as any;
-  const tokens = new Set<string>();
-  if (data.fcmToken) tokens.add(String(data.fcmToken));
-  if (Array.isArray(data.fcmTokens)) data.fcmTokens.forEach((t: string) => t && tokens.add(String(t)));
-  return Array.from(tokens);
+  
+  // FCM tokens (native push)
+  const fcmTokens = new Set<string>();
+  if (data.fcmToken) fcmTokens.add(String(data.fcmToken));
+  if (Array.isArray(data.fcmTokens)) data.fcmTokens.forEach((t: string) => t && fcmTokens.add(String(t)));
+  
+  // Expo tokens (for development/Expo Go)
+  const expoTokens: string[] = Array.isArray(data.deviceTokens) ? data.deviceTokens.filter(Boolean) : [];
+  
+  return {
+    fcmTokens: Array.from(fcmTokens),
+    expoTokens
+  };
 }
 
-async function getUserExpoTokens(userId: string): Promise<string[]> {
-  const snap = await db.collection('users').doc(userId).get();
-  if (!snap.exists) return [];
-  const data = (snap.data() || {}) as any;
-  const tokens: string[] = Array.isArray(data.deviceTokens) ? data.deviceTokens.filter(Boolean) : [];
-  return tokens;
+/**
+ * OPTIMIZED: Get tokens for multiple users in parallel
+ */
+async function getMultipleUserTokens(userIds: string[]): Promise<{ fcmTokens: string[]; expoTokens: string[] }> {
+  const tokenResults = await Promise.all(userIds.map(getUserTokens));
+  
+  return {
+    fcmTokens: tokenResults.flatMap(r => r.fcmTokens),
+    expoTokens: tokenResults.flatMap(r => r.expoTokens)
+  };
 }
 
 async function sendExpoPush(tokens: string[], title: string, body: string, data: Record<string, string>) {
@@ -50,16 +68,12 @@ async function getAdminUserIds(): Promise<string[]> {
   return snap.docs.map((d) => d.id);
 }
 
-async function getAdminFcmTokens(): Promise<string[]> {
+/**
+ * OPTIMIZED: Get all admin tokens in one efficient operation
+ */
+async function getAdminTokens(): Promise<{ fcmTokens: string[]; expoTokens: string[] }> {
   const admins = await getAdminUserIds();
-  const tokenArrays = await Promise.all(admins.map(getUserFcmTokens));
-  return tokenArrays.flat();
-}
-
-async function getAdminExpoTokens(): Promise<string[]> {
-  const admins = await getAdminUserIds();
-  const tokenArrays = await Promise.all(admins.map(getUserExpoTokens));
-  return tokenArrays.flat();
+  return getMultipleUserTokens(admins);
 }
 
 export const onMessageCreated = onDocumentCreated('conversations/{conversationId}/messages/{messageId}', async (event) => {
@@ -71,33 +85,25 @@ export const onMessageCreated = onDocumentCreated('conversations/{conversationId
       const conv = convSnap.data() as any;
       const participants: string[] = conv.participants || [];
       const recipients = participants.filter((uid) => uid !== message.senderId);
-      const [fcmTokens, expoTokens] = await Promise.all([
-        Promise.all(recipients.map(getUserFcmTokens)).then((x) => x.flat()),
-        Promise.all(recipients.map(getUserExpoTokens)).then((x) => x.flat()),
-      ]);
+      
+      // OPTIMIZED: Get all tokens in one efficient call
+      const { fcmTokens, expoTokens } = await getMultipleUserTokens(recipients);
 
       if (fcmTokens.length === 0 && expoTokens.length === 0) return;
 
-      // FCM
-      if (fcmTokens.length > 0) {
-        await messaging.sendEachForMulticast({
+      const notificationData = { type: 'message', conversationId, senderId: String(message.senderId || '') };
+      const title = message.senderName || 'New message';
+      const body = message.type === 'image' ? '📷 Image' : message.type === 'location' ? '📍 Location' : message.text || 'New message';
+
+      // OPTIMIZED: Send FCM and Expo notifications in PARALLEL (not sequential)
+      await Promise.all([
+        fcmTokens.length > 0 ? messaging.sendEachForMulticast({
           tokens: fcmTokens,
-          notification: {
-            title: message.senderName || 'New message',
-            body: message.type === 'image' ? '📷 Image' : message.type === 'location' ? '📍 Location' : message.text || 'New message',
-          },
-          data: { type: 'message', conversationId, senderId: String(message.senderId || '') },
-        });
-      }
-      // Expo
-      if (expoTokens.length > 0) {
-        await sendExpoPush(
-          expoTokens,
-          message.senderName || 'New message',
-          message.type === 'image' ? '📷 Image' : message.type === 'location' ? '📍 Location' : message.text || 'New message',
-          { type: 'message', conversationId, senderId: String(message.senderId || '') }
-        );
-      }
+          notification: { title, body },
+          data: notificationData,
+        }) : Promise.resolve(),
+        expoTokens.length > 0 ? sendExpoPush(expoTokens, title, body, notificationData) : Promise.resolve(),
+      ]);
     } catch (e) {
       logger.error('onMessageCreated error', e);
     }
@@ -110,28 +116,26 @@ export const onBookingUpdated = onDocumentUpdated('bookings/{bookingId}', async 
   if (before.status === after.status) return;
 
   const bookingId = event.params.bookingId as string;
-  let recipients: string[] = [];
-  let title = 'Booking Update';
-  let body = `Your booking is ${after.status}`;
-  recipients = [after.customerId];
+  const recipients: string[] = [after.customerId];
+  const title = 'Booking Update';
+  const body = `Your booking is ${after.status}`;
 
-  const [fcmTokens, expoTokens] = await Promise.all([
-    Promise.all(recipients.map(getUserFcmTokens)).then((x) => x.flat()),
-    Promise.all(recipients.map(getUserExpoTokens)).then((x) => x.flat()),
-  ]);
+  // OPTIMIZED: Get all tokens efficiently
+  const { fcmTokens, expoTokens } = await getMultipleUserTokens(recipients);
   if (fcmTokens.length === 0 && expoTokens.length === 0) return;
 
+  const notificationData = { type: 'booking', bookingId, status: String(after.status || '') };
+
   try {
-    if (fcmTokens.length > 0) {
-      await messaging.sendEachForMulticast({
+    // OPTIMIZED: Send in parallel
+    await Promise.all([
+      fcmTokens.length > 0 ? messaging.sendEachForMulticast({
         tokens: fcmTokens,
         notification: { title, body },
-        data: { type: 'booking', bookingId, status: String(after.status || '') },
-      });
-    }
-    if (expoTokens.length > 0) {
-      await sendExpoPush(expoTokens, title, body, { type: 'booking', bookingId, status: String(after.status || '') });
-    }
+        data: notificationData,
+      }) : Promise.resolve(),
+      expoTokens.length > 0 ? sendExpoPush(expoTokens, title, body, notificationData) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onBookingUpdated error', e);
   }
@@ -145,42 +149,40 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   const providerId = booking.providerId as string;
   if (!providerId) return;
 
-  const title = 'New Booking Request';
-  const body = `${booking.customerName || 'Customer'} requested ${booking.serviceName || 'a service'}`;
   const bookingId = event.params.bookingId as string;
+  const notificationData = { type: 'booking', bookingId, status: String(booking.status || 'pending') };
 
   try {
-    const [fcmTokens, expoTokens, adminFcm, adminExpo] = await Promise.all([
-      getUserFcmTokens(providerId),
-      getUserExpoTokens(providerId),
-      getAdminFcmTokens(),
-      getAdminExpoTokens(),
+    // OPTIMIZED: Fetch provider and admin tokens in parallel
+    const [providerTokens, adminTokens] = await Promise.all([
+      getUserTokens(providerId),
+      getAdminTokens(),
     ]);
 
-    if (fcmTokens.length > 0) {
-      await messaging.sendEachForMulticast({
-        tokens: fcmTokens,
-        notification: { title, body },
-        data: { type: 'booking', bookingId, status: String(booking.status || 'pending') },
-      });
-    }
-    if (expoTokens.length > 0) {
-      await sendExpoPush(expoTokens, title, body, { type: 'booking', bookingId, status: String(booking.status || 'pending') });
-    }
-
-    // Notify admins as well about new booking
+    const providerTitle = 'New Booking Request';
+    const providerBody = `${booking.customerName || 'Customer'} requested ${booking.serviceName || 'a service'}`;
+    
     const adminTitle = 'New Booking Created';
     const adminBody = `${booking.customerName || 'Customer'} booked ${booking.serviceName || 'a service'} for provider ${booking.providerName || ''}`;
-    if (adminFcm.length > 0) {
-      await messaging.sendEachForMulticast({
-        tokens: adminFcm,
+
+    // OPTIMIZED: Send all notifications in parallel
+    await Promise.all([
+      // Provider notifications
+      providerTokens.fcmTokens.length > 0 ? messaging.sendEachForMulticast({
+        tokens: providerTokens.fcmTokens,
+        notification: { title: providerTitle, body: providerBody },
+        data: notificationData,
+      }) : Promise.resolve(),
+      providerTokens.expoTokens.length > 0 ? sendExpoPush(providerTokens.expoTokens, providerTitle, providerBody, notificationData) : Promise.resolve(),
+      
+      // Admin notifications
+      adminTokens.fcmTokens.length > 0 ? messaging.sendEachForMulticast({
+        tokens: adminTokens.fcmTokens,
         notification: { title: adminTitle, body: adminBody },
-        data: { type: 'booking', bookingId, status: String(booking.status || 'pending') },
-      });
-    }
-    if (adminExpo.length > 0) {
-      await sendExpoPush(adminExpo, adminTitle, adminBody, { type: 'booking', bookingId, status: String(booking.status || 'pending') });
-    }
+        data: notificationData,
+      }) : Promise.resolve(),
+      adminTokens.expoTokens.length > 0 ? sendExpoPush(adminTokens.expoTokens, adminTitle, adminBody, notificationData) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onBookingCreated error', e);
   }
@@ -209,22 +211,20 @@ export const onProviderApplicationCreated = onDocumentCreated('providers/{provid
     
     logger.info('Filtered admin IDs (excluding provider)', { filteredAdminIds, excludedProviderId: providerId });
     
-    // Get tokens only for actual admins (excluding provider)
-    const [adminFcm, adminExpo] = await Promise.all([
-      Promise.all(filteredAdminIds.map(getUserFcmTokens)).then((x) => x.flat()),
-      Promise.all(filteredAdminIds.map(getUserExpoTokens)).then((x) => x.flat()),
-    ]);
+    // OPTIMIZED: Get tokens for all admins efficiently
+    const { fcmTokens: adminFcm, expoTokens: adminExpo } = await getMultipleUserTokens(filteredAdminIds);
     
-    if (adminFcm.length > 0) {
-      await messaging.sendEachForMulticast({
+    const notificationData = { type: 'provider_application', providerId };
+    
+    // OPTIMIZED: Send in parallel
+    await Promise.all([
+      adminFcm.length > 0 ? messaging.sendEachForMulticast({
         tokens: adminFcm,
         notification: { title, body },
-        data: { type: 'provider_application', providerId },
-      });
-    }
-    if (adminExpo.length > 0) {
-      await sendExpoPush(adminExpo, title, body, { type: 'provider_application', providerId });
-    }
+        data: notificationData,
+      }) : Promise.resolve(),
+      adminExpo.length > 0 ? sendExpoPush(adminExpo, title, body, notificationData) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onProviderApplicationCreated error', e);
   }
@@ -279,22 +279,22 @@ export const onProviderApplicationUpdated = onDocumentUpdated('providers/{provid
   logger.info('Sending notification', { providerId, status, title });
 
   try {
-    const [fcm, expo] = await Promise.all([getUserFcmTokens(providerId), getUserExpoTokens(providerId)]);
+    // OPTIMIZED: Get tokens efficiently
+    const { fcmTokens: fcm, expoTokens: expo } = await getUserTokens(providerId);
     
     logger.info('Got tokens', { fcmCount: fcm.length, expoCount: expo.length });
     
-    if (fcm.length > 0) {
-      await messaging.sendEachForMulticast({
+    const notificationData = { type: 'provider_application_status', status, providerId };
+    
+    // OPTIMIZED: Send in parallel
+    await Promise.all([
+      fcm.length > 0 ? messaging.sendEachForMulticast({
         tokens: fcm,
         notification: { title, body },
-        data: { type: 'provider_application_status', status },
-      });
-      logger.info('FCM notification sent');
-    }
-    if (expo.length > 0) {
-      await sendExpoPush(expo, title, body, { type: 'provider_application_status', status });
-      logger.info('Expo notification sent');
-    }
+        data: notificationData,
+      }).then(() => logger.info('FCM notification sent')) : Promise.resolve(),
+      expo.length > 0 ? sendExpoPush(expo, title, body, notificationData).then(() => logger.info('Expo notification sent')) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onProviderApplicationUpdated error', e);
   }
@@ -306,14 +306,18 @@ export const onProviderServiceCreated = onDocumentCreated('providerServices/{ser
   if (!svc) return;
   const title = 'New Provider Service';
   const body = `${svc.providerName || 'Provider'} created service ${svc.name || ''}`;
+  const serviceId = event.params.serviceId as string;
+  const notificationData = { type: 'provider_service', serviceId, providerId: svc.providerId || '' };
+  
   try {
-    const [adminFcm, adminExpo] = await Promise.all([getAdminFcmTokens(), getAdminExpoTokens()]);
-    if (adminFcm.length > 0) {
-      await messaging.sendEachForMulticast({ tokens: adminFcm, notification: { title, body }, data: { type: 'provider_service', serviceId: event.params.serviceId as string } });
-    }
-    if (adminExpo.length > 0) {
-      await sendExpoPush(adminExpo, title, body, { type: 'provider_service', serviceId: event.params.serviceId as string });
-    }
+    // OPTIMIZED: Get admin tokens efficiently
+    const { fcmTokens: adminFcm, expoTokens: adminExpo } = await getAdminTokens();
+    
+    // OPTIMIZED: Send in parallel
+    await Promise.all([
+      adminFcm.length > 0 ? messaging.sendEachForMulticast({ tokens: adminFcm, notification: { title, body }, data: notificationData }) : Promise.resolve(),
+      adminExpo.length > 0 ? sendExpoPush(adminExpo, title, body, notificationData) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onProviderServiceCreated error', e);
   }
@@ -330,16 +334,20 @@ export const onProviderServiceUpdated = onDocumentUpdated('providerServices/{ser
 
   const providerId = String(after.providerId || '');
   if (!providerId) return;
+  const serviceId = event.params.serviceId as string;
   const title = status === 'approved' ? 'Service Approved' : 'Service Rejected';
   const body = status === 'approved' ? `Your service "${after.name || ''}" is approved` : `Your service "${after.name || ''}" was rejected`;
+  const notificationData = { type: 'provider_service_status', status, serviceId, providerId };
+  
   try {
-    const [fcm, expo] = await Promise.all([getUserFcmTokens(providerId), getUserExpoTokens(providerId)]);
-    if (fcm.length > 0) {
-      await messaging.sendEachForMulticast({ tokens: fcm, notification: { title, body }, data: { type: 'provider_service_status', status } });
-    }
-    if (expo.length > 0) {
-      await sendExpoPush(expo, title, body, { type: 'provider_service_status', status });
-    }
+    // OPTIMIZED: Get tokens efficiently
+    const { fcmTokens: fcm, expoTokens: expo } = await getUserTokens(providerId);
+    
+    // OPTIMIZED: Send in parallel
+    await Promise.all([
+      fcm.length > 0 ? messaging.sendEachForMulticast({ tokens: fcm, notification: { title, body }, data: notificationData }) : Promise.resolve(),
+      expo.length > 0 ? sendExpoPush(expo, title, body, notificationData) : Promise.resolve(),
+    ]);
   } catch (e) {
     logger.error('onProviderServiceUpdated error', e);
   }

@@ -138,6 +138,22 @@ export const usePushNotifications = () => {
     }
   }, [router]);
 
+  // CRITICAL FIX: Handle notification when app is launched from killed state
+  useEffect(() => {
+    // Check if app was opened from a notification (killed state)
+    Notifications.getLastNotificationResponseAsync()
+      .then(response => {
+        if (response) {
+          console.log('🚀 App launched from notification (killed state):', response);
+          handleNotificationResponse(response);
+        }
+      })
+      .catch(error => {
+        console.error('Error getting last notification response:', error);
+      });
+  }, [handleNotificationResponse]);
+
+  // Handle notifications when app is running (foreground/background)
   useEffect(() => {
     // Setup notification listeners
     const cleanup = setupNotificationListeners(
@@ -146,9 +162,9 @@ export const usePushNotifications = () => {
         console.log('📱 Notification received (foreground):', notification);
         setNotification(notification);
       },
-      // When user taps on notification
+      // When user taps on notification (background/foreground)
       (response) => {
-        console.log('👆 Notification tapped:', response);
+        console.log('👆 Notification tapped (app running):', response);
         handleNotificationResponse(response);
       }
     );
