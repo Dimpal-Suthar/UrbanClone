@@ -55,9 +55,8 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
     try {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
+        allowsEditing: false,  // Don't force cropping - send as-is
+        quality: 0.9,          // High quality (90%)
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -77,9 +76,9 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
+        allowsEditing: false,  // Don't force cropping - send as-is
+        quality: 0.9,          // High quality (90%)
+        allowsMultipleSelection: false,  // Single image at a time
       });
 
       if (!result.canceled && result.assets[0]) {

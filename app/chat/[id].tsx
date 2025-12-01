@@ -3,7 +3,6 @@ import { MessageBubble } from '@/components/chat/MessageBubble';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { Avatar } from '@/components/ui/Avatar';
 import { Container } from '@/components/ui/Container';
-import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { conversationKeys, useMarkAsRead } from '@/hooks/useConversations';
@@ -21,7 +20,9 @@ import { observer } from 'mobx-react-lite';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -30,6 +31,8 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const ChatDetailScreen = observer(() => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +45,7 @@ const ChatDetailScreen = observer(() => {
 
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const typingStateRef = useRef(false);
 
   // Get conversation data
@@ -229,6 +233,23 @@ const ChatDetailScreen = observer(() => {
     }
   }, [messages.length]);
 
+  // Get image dimensions when image is selected
+  useEffect(() => {
+    if (selectedImage) {
+      Image.getSize(
+        selectedImage,
+        (width, height) => {
+          setImageDimensions({ width, height });
+        },
+        () => {
+          setImageDimensions(null);
+        }
+      );
+    } else {
+      setImageDimensions(null);
+    }
+  }, [selectedImage]);
+
   if (!conversation || isLoadingParticipant) {
     return (
       <Container safeArea edges={['top']}>
@@ -389,38 +410,55 @@ const ChatDetailScreen = observer(() => {
             animationType="fade"
             onRequestClose={() => setSelectedImage(null)}
           >
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: 'rgba(0,0,0,0.9)',
-              }}
-            >
-              {/* Close Button */}
-              <Pressable
-                onPress={() => setSelectedImage(null)}
-                style={{
-                  position: 'absolute',
-                  top: 50,
-                  right: 20,
-                  zIndex: 10,
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+            <View className="flex-1 bg-black">
+              {/* Header */}
+              <View 
+                className="flex-row items-center justify-between p-4"
+                style={{ paddingTop: insets.top + 16 }}
               >
-                <Ionicons name="close" size={24} color="white" />
-              </Pressable>
+                <Pressable
+                  onPress={() => setSelectedImage(null)}
+                  className="w-10 h-10 rounded-full items-center justify-center"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                >
+                  <Ionicons name="close" size={24} color="white" />
+                </Pressable>
+                <View className="w-10" />
+              </View>
 
-              {/* Image */}
-              <ImageCarousel
-                images={[selectedImage]}
-                height={600}
-                showIndicators={false}
-                showFullScreen={false}
-              />
+              {/* Image Container */}
+              <View className="flex-1 items-center justify-center">
+                {imageDimensions ? (
+                  (() => {
+                    const maxWidth = screenWidth;
+                    const headerHeight = insets.top + 60;
+                    const footerHeight = insets.bottom + 20;
+                    const maxHeight = screenHeight - headerHeight - footerHeight;
+
+                    const widthScale = maxWidth / imageDimensions.width;
+                    const heightScale = maxHeight / imageDimensions.height;
+                    const scale = Math.min(widthScale, heightScale, 1); // Don't scale up beyond original size
+
+                    const fittedWidth = imageDimensions.width * scale;
+                    const fittedHeight = imageDimensions.height * scale;
+
+                    return (
+                      <Image
+                        source={{ uri: selectedImage }}
+                        style={{ 
+                          width: fittedWidth, 
+                          height: fittedHeight,
+                          maxWidth: maxWidth,
+                          maxHeight: maxHeight,
+                        }}
+                        resizeMode="contain"
+                      />
+                    );
+                  })()
+                ) : (
+                  <ActivityIndicator size="large" color="white" />
+                )}
+              </View>
             </View>
           </Modal>
         )}
