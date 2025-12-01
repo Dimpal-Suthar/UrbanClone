@@ -155,6 +155,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     });
   };
 
+  const handleImagesSelected = (imageUris: string[]) => {
+    setSelectedImages((prev) => {
+      const remainingSlots = MAX_IMAGES - prev.length;
+      if (remainingSlots <= 0) {
+        showFailedMessage('Limit Reached', `You can attach up to ${MAX_IMAGES} images per message.`);
+        setShowImagePicker(false);
+        return prev;
+      }
+      
+      // Filter out duplicates and limit to remaining slots
+      const newImages = imageUris
+        .filter(uri => !prev.some(existingUri => existingUri === uri))
+        .slice(0, remainingSlots);
+      
+      if (newImages.length === 0) {
+        setShowImagePicker(false);
+        return prev;
+      }
+      
+      if (imageUris.length > remainingSlots) {
+        showFailedMessage(
+          'Selection Limited', 
+          `You can only attach ${remainingSlots} more image${remainingSlots === 1 ? '' : 's'}. Selected ${newImages.length} image${newImages.length === 1 ? '' : 's'}.`
+        );
+      }
+      
+      const updated = [...prev, ...newImages];
+      setShowImagePicker(false);
+      return updated;
+    });
+  };
+
   return (
     <View
       style={{
@@ -170,7 +202,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         visible={showImagePicker}
         onClose={() => setShowImagePicker(false)}
         onImageSelected={handleImageSelected}
+        onImagesSelected={handleImagesSelected}
         title="Select Image"
+        allowsMultipleSelection={true}
+        maxSelection={Math.max(1, MAX_IMAGES - selectedImages.length)}
       />
 
       {selectedImages.length > 0 && (

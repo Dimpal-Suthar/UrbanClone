@@ -9,14 +9,20 @@ interface ImagePickerBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   onImageSelected: (imageUri: string) => void;
+  onImagesSelected?: (imageUris: string[]) => void; // For multiple selection
   title?: string;
+  allowsMultipleSelection?: boolean;
+  maxSelection?: number;
 }
 
 export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
   visible,
   onClose,
   onImageSelected,
+  onImagesSelected,
   title = 'Select Image',
+  allowsMultipleSelection = false,
+  maxSelection,
 }) => {
   const { colors } = useTheme();
 
@@ -78,11 +84,17 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
         mediaTypes: ['images'],
         allowsEditing: false,  // Don't force cropping - send as-is
         quality: 0.9,          // High quality (90%)
-        allowsMultipleSelection: false,  // Single image at a time
+        allowsMultipleSelection: allowsMultipleSelection,
+        selectionLimit: allowsMultipleSelection ? maxSelection : 1,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        onImageSelected(result.assets[0].uri);
+      if (!result.canceled && result.assets.length > 0) {
+        if (allowsMultipleSelection && onImagesSelected) {
+          const imageUris = result.assets.map(asset => asset.uri);
+          onImagesSelected(imageUris);
+        } else {
+          onImageSelected(result.assets[0].uri);
+        }
         onClose();
       }
     } catch (error) {
@@ -161,7 +173,9 @@ export const ImagePickerBottomSheet: React.FC<ImagePickerBottomSheetProps> = ({
                   Choose from Gallery
                 </Text>
                 <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                  Select an existing photo from your gallery
+                  {allowsMultipleSelection && maxSelection
+                    ? `Select up to ${maxSelection} photos from your gallery`
+                    : 'Select an existing photo from your gallery'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
