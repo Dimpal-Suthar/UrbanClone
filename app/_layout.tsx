@@ -5,9 +5,13 @@ import { NotificationProvider } from '@/providers/NotificationProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { StoreProvider } from '@/stores/StoreProvider';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
 import '../global.css';
+
+// Prevent native splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
   useProviderApplicationStatus();

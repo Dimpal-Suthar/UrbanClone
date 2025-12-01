@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, useColorScheme as useSystemColorScheme, View } from 'react-native';
 
@@ -37,6 +38,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         console.log('Error loading theme:', error);
       } finally {
         setIsInitialized(true);
+        // Hide splash screen once theme is initialized and component can render
+        setTimeout(() => {
+          SplashScreen.hideAsync().catch(() => {
+            // Ignore errors
+          });
+        }, 100);
       }
     };
     // Load in background, don't block rendering
