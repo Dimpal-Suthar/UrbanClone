@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.urbanclone.app</string>
+	<string>com.brilworks.servicesquad</string>
 	<key>PROJECT_ID</key>
 	<string>urban-clone-10833</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:107821226807:ios:dbb01b74b94b8262d8d8b2</string>
+	<string>1:107821226807:ios:e8a664990faf9e27d8d8b2</string>
 </dict>
 </plist>

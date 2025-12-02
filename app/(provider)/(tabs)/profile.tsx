@@ -16,8 +16,8 @@ const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'briefcase-outline', label: 'Provider Details', screen: '/provider/edit-details' },
   { id: '3', icon: 'star-outline', label: 'Reviews & Ratings', screen: 'reviews' },
-  { id: '4', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '5', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '4', icon: 'document-text-outline', label: 'Terms of Service', screen: 'terms-of-service' },
+  { id: '5', icon: 'shield-checkmark-outline', label: 'Privacy Policy', screen: 'privacy-policy' },
 ];
 
 const ProviderProfileScreen = observer(() => {
@@ -59,6 +59,14 @@ const ProviderProfileScreen = observer(() => {
         return;
       }
       router.push(`/provider/reviews/${user.uid}`);
+      return;
+    }
+    if (screen === 'terms-of-service') {
+      router.push({ pathname: '/legal', params: { type: 'terms' } });
+      return;
+    }
+    if (screen === 'privacy-policy') {
+      router.push({ pathname: '/legal', params: { type: 'privacy' } });
       return;
     }
     showInfoMessage('Coming Soon', 'This section will be available soon.');

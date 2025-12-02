@@ -64,22 +64,36 @@ const buildConversationFromDoc = (id: string, data: any): Conversation => {
 
 /**
  * Get or create a conversation between customer and provider
+ * @param input - Conversation input data
+ * @param currentUserId - The ID of the user making the request (must be either customerId or providerId)
  */
 export const getOrCreateConversation = async (
-  input: CreateConversationInput
+  input: CreateConversationInput,
+  currentUserId: string
 ): Promise<Conversation> => {
   try {
+    // Validate that currentUserId is one of the participants
+    if (currentUserId !== input.customerId && currentUserId !== input.providerId) {
+      throw new Error('Current user must be either customer or provider');
+    }
+
     // Check if conversation already exists
+    // IMPORTANT: Query by currentUserId to ensure security rules pass
+    // Security rules check: request.auth.uid in resource.data.participants
+    // So we must query by the current user's ID
     const conversationsRef = collection(db, 'conversations');
     const q = query(
       conversationsRef,
-      where('participants', 'array-contains', input.customerId)
+      where('participants', 'array-contains', currentUserId)
     );
 
     const snapshot = await getDocs(q);
+    
+    // Find conversation that has both customer and provider
     const existingConv = snapshot.docs.find((doc) => {
       const data = doc.data();
-      return data.participants.includes(input.providerId);
+      return data.participants.includes(input.customerId) && 
+             data.participants.includes(input.providerId);
     });
 
     if (existingConv) {

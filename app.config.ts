@@ -27,9 +27,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: 'ServiceSquad',
-    slug: 'urbanclone',
+    slug: 'urbanclone', // Keep matching EAS project slug (not editable in dashboard)
     version: '1.0.0',
-    scheme: 'urbanclone',
+    scheme: 'servicesquad',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.urbanclone.app',
+      bundleIdentifier: 'com.brilworks.servicesquad',
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'This app needs access to location when open to show nearby services and track your location.',
@@ -63,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      package: 'com.urbanclone.app',
+      package: 'com.brilworks.servicesquad',
       permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION'],
       googleServicesFile: './google-services.json',
       config: {
@@ -80,6 +80,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-router',
       'expo-font',
       'expo-location',
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
       [
         'expo-build-properties',
         {

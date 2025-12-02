@@ -1,5 +1,5 @@
 /**
- * Map-related types for the UrbanClone app
+ * Map-related types for the ServiceSquad app
  */
 
 export interface Location {

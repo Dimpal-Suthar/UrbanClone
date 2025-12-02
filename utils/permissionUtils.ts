@@ -24,7 +24,7 @@ export const openSettings = async (): Promise<void> => {
     console.error('Error opening settings:', error);
     Alert.alert(
       'Open Settings',
-      'Please go to Settings > Apps > UrbanClone > Permissions to enable permissions manually.',
+      'Please go to Settings > Apps > ServiceSquad > Permissions to enable permissions manually.',
       [{ text: 'OK' }]
     );
   }

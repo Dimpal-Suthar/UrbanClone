@@ -51,33 +51,6 @@ const ProviderBookingsScreen = observer(() => {
 
   // Filter bookings based on active tab
   const filteredBookings = allBookings.filter((booking) => {
-    // Handle 'today' filter - only show today's bookings
-    if (filter === 'today') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
-      
-      const getBookingDateStr = (scheduledDate: any): string => {
-        if (!scheduledDate) return '';
-        if (scheduledDate?.toDate) {
-          return scheduledDate.toDate().toISOString().split('T')[0];
-        }
-        if (scheduledDate instanceof Date) {
-          return scheduledDate.toISOString().split('T')[0];
-        }
-        if (typeof scheduledDate === 'string') {
-          return scheduledDate.split('T')[0];
-        }
-        return '';
-      };
-      
-      const bookingDateStr = getBookingDateStr(booking.scheduledDate);
-      const isToday = bookingDateStr === todayStr;
-      
-      // Only show today's bookings that are in upcoming statuses
-      return isToday && ['accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(booking.status);
-    }
-    
     switch (activeTab) {
       case 'new':
         return booking.status === 'pending';

@@ -44,7 +44,12 @@ export const useGetOrCreateConversation = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (input: CreateConversationInput) => getOrCreateConversation(input),
+    mutationFn: (input: CreateConversationInput) => {
+      if (!user?.uid) {
+        throw new Error('User must be authenticated');
+      }
+      return getOrCreateConversation(input, user.uid);
+    },
     onSuccess: (conversation) => {
       // Update conversations list cache
       if (user?.uid) {

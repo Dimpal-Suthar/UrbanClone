@@ -20,7 +20,8 @@ const MENU_ITEMS = [
   { id: '1', icon: 'person-outline', label: 'Edit Profile', screen: '/profile/edit' },
   { id: '2', icon: 'location-outline', label: 'Saved Addresses', screen: 'addresses' },
   { id: '3', icon: 'help-circle-outline', label: 'Help & Support', screen: 'support' },
-  { id: '4', icon: 'document-text-outline', label: 'Terms & Privacy', screen: 'terms' },
+  { id: '4', icon: 'document-text-outline', label: 'Terms of Service', screen: 'terms-of-service' },
+  { id: '5', icon: 'shield-checkmark-outline', label: 'Privacy Policy', screen: 'privacy-policy' },
 ];
 
 const ProfileScreen = observer(() => {
@@ -83,6 +84,14 @@ const ProfileScreen = observer(() => {
     }
     if (screen === 'addresses') {
       router.push('/addresses');
+      return;
+    }
+    if (screen === 'terms-of-service') {
+      router.push({ pathname: '/legal', params: { type: 'terms' } });
+      return;
+    }
+    if (screen === 'privacy-policy') {
+      router.push({ pathname: '/legal', params: { type: 'privacy' } });
       return;
     }
     if (screen === 'edit-profile') {
