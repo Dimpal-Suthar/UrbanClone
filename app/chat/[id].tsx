@@ -10,7 +10,7 @@ import { useUploadImage } from '@/hooks/useImageUpload';
 import { useMessages, useMessagesRealtime, useSendMessage } from '@/hooks/useMessages';
 import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
 import { setTypingStatus, subscribeToConversation } from '@/services/chatService';
-import type { Conversation } from '@/types/chat';
+import type { Conversation, ParticipantData } from '@/types/chat';
 import { makeCall } from '@/utils/callHelpers';
 import { showFailedMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,8 +48,50 @@ const ChatDetailScreen = observer(() => {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const typingStateRef = useRef(false);
 
-  // Get conversation data
+  // Handle navigation back with fallback to chat list
+  const handleGoBack = useCallback(() => {
+    try {
+      // Try to go back first
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        // If no back history, navigate to chat list
+        router.replace('/(tabs)/chat');
+      }
+    } catch (error) {
+      // Fallback: navigate to chat list if back fails
+      router.replace('/(tabs)/chat');
+    }
+  }, [router]);
+
+  // Track if conversation fetch failed
+  const [conversationNotFound, setConversationNotFound] = useState(false);
+
+  // Get conversation data from cache
   const conversation = queryClient.getQueryData<Conversation>(conversationKeys.detail(id || ''));
+  
+  // Fetch conversation if not in cache
+  useEffect(() => {
+    if (!id || conversation) {
+      setConversationNotFound(false);
+      return;
+    }
+    
+    // Import dynamically to avoid circular dependencies
+    const { getConversation } = require('@/services/chatService');
+    
+    getConversation(id).then((conv: Conversation | null) => {
+      if (conv) {
+        queryClient.setQueryData(conversationKeys.detail(id), conv);
+        setConversationNotFound(false);
+      } else {
+        setConversationNotFound(true);
+      }
+    }).catch((error: any) => {
+      console.error('Error fetching conversation:', error);
+      setConversationNotFound(true);
+    });
+  }, [id, conversation, queryClient]);
 
   // Fetch messages with pagination
   const {
@@ -79,6 +121,12 @@ const ChatDetailScreen = observer(() => {
   // This uses TanStack Query caching and shares data across components
   const { data: otherUserProfile, isLoading: isLoadingParticipant } = useUserProfile(otherUserId || null);
   useUserProfileRealtime(otherUserId || null); // Real-time updates
+  
+  // Get participant data from conversation as fallback
+  const conversationParticipantData: ParticipantData | undefined = 
+    otherUserId && conversation?.participantsData?.[otherUserId] 
+      ? conversation.participantsData[otherUserId] 
+      : undefined;
 
   useEffect(() => {
     if (!id) return;
@@ -116,11 +164,17 @@ const ChatDetailScreen = observer(() => {
   };
   
   // Map otherUserProfile to otherParticipant format
+  // Use conversation participantsData as fallback if user profile is not found
   const otherParticipant = otherUserProfile ? {
-    name: otherUserProfile.displayName || 'User',
-    photo: otherUserProfile.photoURL || null,
-    role: otherUserProfile.role || 'customer',
+    name: otherUserProfile.displayName || conversationParticipantData?.name || 'User',
+    photo: otherUserProfile.photoURL || conversationParticipantData?.photo || null,
+    role: otherUserProfile.role || conversationParticipantData?.role || 'customer',
     phone: otherUserProfile.phone || null,
+  } : conversationParticipantData ? {
+    name: conversationParticipantData.name || 'User',
+    photo: conversationParticipantData.photo || null,
+    role: conversationParticipantData.role || 'customer',
+    phone: null,
   } : null;
 
   // Mark messages as read when screen is focused
@@ -250,7 +304,9 @@ const ChatDetailScreen = observer(() => {
     }
   }, [selectedImage]);
 
-  if (!conversation || isLoadingParticipant) {
+
+  // Show loading only if conversation is not in cache and we're still loading
+  if (!conversation && !conversationNotFound) {
     return (
       <Container safeArea edges={['top']}>
         <View className="flex-1 items-center justify-center">
@@ -262,15 +318,64 @@ const ChatDetailScreen = observer(() => {
       </Container>
     );
   }
+
+  // Show error if conversation not found
+  if (conversationNotFound || !conversation) {
+    return (
+      <Container safeArea edges={['top']}>
+        <View className="flex-1 items-center justify-center px-6">
+          <Ionicons name="chatbubble-outline" size={64} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+          <Text className="text-lg font-semibold mt-4 text-center" style={{ color: colors.text }}>
+            Conversation Not Found
+          </Text>
+          <Text className="text-sm mt-2 text-center" style={{ color: colors.textSecondary }}>
+            This conversation may have been deleted or you don't have access to it.
+          </Text>
+          <Pressable 
+            onPress={handleGoBack} 
+            className="mt-6 px-6 py-3 rounded-lg"
+            style={{ backgroundColor: colors.primary }}
+          >
+            <Text style={{ color: 'white', fontWeight: '600' }}>Go to Messages</Text>
+          </Pressable>
+        </View>
+      </Container>
+    );
+  }
   
-  // Fallback if otherParticipant is null
-  if (!otherParticipant) {
+  // Show loading if we're fetching participant profile (but allow using conversation data)
+  if (isLoadingParticipant && !conversationParticipantData) {
     return (
       <Container safeArea edges={['top']}>
         <View className="flex-1 items-center justify-center">
-          <Text className="text-sm" style={{ color: colors.textSecondary }}>
-            User not found
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="text-sm mt-4" style={{ color: colors.textSecondary }}>
+            Loading user information...
           </Text>
+        </View>
+      </Container>
+    );
+  }
+  
+  // Fallback if otherParticipant is null (shouldn't happen if conversation has participantsData)
+  if (!otherParticipant || !otherUserId) {
+    return (
+      <Container safeArea edges={['top']}>
+        <View className="flex-1 items-center justify-center px-6">
+          <Ionicons name="alert-circle-outline" size={64} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+          <Text className="text-lg font-semibold mt-4 text-center" style={{ color: colors.text }}>
+            Unable to Load Chat
+          </Text>
+          <Text className="text-sm mt-2 text-center" style={{ color: colors.textSecondary }}>
+            Unable to load chat information. Please try again later.
+          </Text>
+          <Pressable 
+            onPress={handleGoBack} 
+            className="mt-6 px-6 py-3 rounded-lg"
+            style={{ backgroundColor: colors.primary }}
+          >
+            <Text style={{ color: 'white', fontWeight: '600' }}>Go to Messages</Text>
+          </Pressable>
         </View>
       </Container>
     );

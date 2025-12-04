@@ -26,6 +26,33 @@ import {
 } from 'firebase/firestore';
 
 /**
+ * Helper function to safely convert Firestore timestamps or ISO strings to Date
+ * This handles both old data (ISO strings) and new data (Firestore Timestamps)
+ */
+const safeToDate = (value: any): Date => {
+  if (!value) return new Date();
+  
+  // If it's a Firestore Timestamp with toDate method
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  
+  // If it's an ISO string
+  if (typeof value === 'string') {
+    return new Date(value);
+  }
+  
+  // If it's already a Date
+  if (value instanceof Date) {
+    return value;
+  }
+  
+  // Fallback
+  return new Date();
+};
+
+
+/**
  * Create a new booking
  */
 export const createBooking = async (
@@ -91,9 +118,9 @@ export const getBookingById = async (bookingId: string): Promise<Booking | null>
       return {
         id: docSnap.id,
         ...docSnap.data(),
-        createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-        updatedAt: docSnap.data().updatedAt?.toDate() || new Date(),
-        completedAt: docSnap.data().completedAt?.toDate() || null,
+        createdAt: safeToDate(docSnap.data().createdAt),
+        updatedAt: safeToDate(docSnap.data().updatedAt),
+        completedAt: docSnap.data().completedAt ? safeToDate(docSnap.data().completedAt) : null,
       } as Booking;
     }
 
@@ -119,9 +146,9 @@ export const getCustomerBookings = async (customerId: string): Promise<Booking[]
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      completedAt: doc.data().completedAt?.toDate() || null,
+      createdAt: safeToDate(doc.data().createdAt),
+      updatedAt: safeToDate(doc.data().updatedAt),
+      completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
     })) as Booking[];
   } catch (error) {
     console.error('❌ Error getting customer bookings:', error);
@@ -144,9 +171,9 @@ export const getProviderBookings = async (providerId: string): Promise<Booking[]
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      completedAt: doc.data().completedAt?.toDate() || null,
+      createdAt: safeToDate(doc.data().createdAt),
+      updatedAt: safeToDate(doc.data().updatedAt),
+      completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
     })) as Booking[];
   } catch (error) {
     console.error('❌ Error getting provider bookings:', error);
@@ -173,9 +200,9 @@ export const getCustomerBookingsByStatus = async (
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      completedAt: doc.data().completedAt?.toDate() || null,
+      createdAt: safeToDate(doc.data().createdAt),
+      updatedAt: safeToDate(doc.data().updatedAt),
+      completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
     })) as Booking[];
   } catch (error) {
     console.error('❌ Error getting customer bookings by status:', error);
@@ -202,9 +229,9 @@ export const getProviderBookingsByStatus = async (
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      completedAt: doc.data().completedAt?.toDate() || null,
+      createdAt: safeToDate(doc.data().createdAt),
+      updatedAt: safeToDate(doc.data().updatedAt),
+      completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
     })) as Booking[];
   } catch (error) {
     console.error('❌ Error getting provider bookings by status:', error);
@@ -493,9 +520,9 @@ export const getAllBookings = async (): Promise<Booking[]> => {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      completedAt: doc.data().completedAt?.toDate() || null,
+      createdAt: safeToDate(doc.data().createdAt),
+      updatedAt: safeToDate(doc.data().updatedAt),
+      completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
     })) as Booking[];
   } catch (error) {
     console.error('❌ Error getting all bookings:', error);

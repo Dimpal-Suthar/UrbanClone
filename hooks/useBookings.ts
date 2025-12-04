@@ -1,28 +1,54 @@
 import { db } from '@/config/firebase';
 import {
-  acceptBooking,
-  cancelBooking,
-  completeBooking,
-  createBooking,
-  getAllBookings,
-  getBookingById,
-  getCustomerBookingCount,
-  getCustomerBookings,
-  getCustomerBookingsByStatus,
-  getProviderBookingCount,
-  getProviderBookings,
-  getProviderBookingsByStatus,
-  markOnTheWay,
-  rejectBooking,
-  rescheduleBooking,
-  startService,
-  updateBooking,
-  updateBookingStatus,
+    acceptBooking,
+    cancelBooking,
+    completeBooking,
+    createBooking,
+    getAllBookings,
+    getBookingById,
+    getCustomerBookingCount,
+    getCustomerBookings,
+    getCustomerBookingsByStatus,
+    getProviderBookingCount,
+    getProviderBookings,
+    getProviderBookingsByStatus,
+    markOnTheWay,
+    rejectBooking,
+    rescheduleBooking,
+    startService,
+    updateBooking,
+    updateBookingStatus,
 } from '@/services/bookingService';
 import { Booking, BookingStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, doc, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useEffect } from 'react';
+
+/**
+ * Helper function to safely convert Firestore timestamps or ISO strings to Date
+ * This handles both old data (ISO strings) and new data (Firestore Timestamps)
+ */
+const safeToDate = (value: any): Date => {
+  if (!value) return new Date();
+  
+  // If it's a Firestore Timestamp with toDate method
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  
+  // If it's an ISO string
+  if (typeof value === 'string') {
+    return new Date(value);
+  }
+  
+  // If it's already a Date
+  if (value instanceof Date) {
+    return value;
+  }
+  
+  // Fallback
+  return new Date();
+};
 
 /**
  * Hook to get count of customer bookings by status (optimized using getCountFromServer)
@@ -81,9 +107,9 @@ export const useBooking = (bookingId: string | null) => {
           const booking: Booking = {
             id: docSnapshot.id,
             ...docSnapshot.data(),
-            createdAt: docSnapshot.data().createdAt?.toDate() || new Date(),
-            updatedAt: docSnapshot.data().updatedAt?.toDate() || new Date(),
-            completedAt: docSnapshot.data().completedAt?.toDate() || null,
+            createdAt: safeToDate(docSnapshot.data().createdAt),
+            updatedAt: safeToDate(docSnapshot.data().updatedAt),
+            completedAt: docSnapshot.data().completedAt ? safeToDate(docSnapshot.data().completedAt) : null,
           } as Booking;
           queryClient.setQueryData(['booking', bookingId], booking);
         }
@@ -128,9 +154,9 @@ export const useCustomerBookings = (customerId: string | null) => {
         const bookings: Booking[] = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-          completedAt: doc.data().completedAt?.toDate() || null,
+          createdAt: safeToDate(doc.data().createdAt),
+          updatedAt: safeToDate(doc.data().updatedAt),
+          completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
         })) as Booking[];
         queryClient.setQueryData(['customer-bookings', customerId], bookings);
       },
@@ -191,9 +217,9 @@ export const useProviderBookings = (providerId: string | null) => {
         const bookings: Booking[] = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-          completedAt: doc.data().completedAt?.toDate() || null,
+          createdAt: safeToDate(doc.data().createdAt),
+          updatedAt: safeToDate(doc.data().updatedAt),
+          completedAt: doc.data().completedAt ? safeToDate(doc.data().completedAt) : null,
         })) as Booking[];
         queryClient.setQueryData(['provider-bookings', providerId], bookings);
       },

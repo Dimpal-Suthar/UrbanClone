@@ -1,11 +1,11 @@
-import { Image } from 'react-native';
+import { Card } from '@/components/ui/Card';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
+import { BookingStatus } from '@/types';
+import { formatBookingDate } from '@/utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Card } from '@/components/ui/Card';
-import { BookingStatus } from '@/types';
-import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
+import { Image, Pressable, Text, View } from 'react-native';
 
 interface BookingListCardProps {
   booking: any;
@@ -25,12 +25,7 @@ export const BookingListCard = ({ booking, showProvider = true }: BookingListCar
   const userName = userProfile?.displayName || (showProvider ? booking.providerName : booking.customerName);
   const userPhoto = userProfile?.photoURL || (showProvider ? booking.providerPhoto : booking.customerPhoto);
   
-  const dateObj = new Date(booking.scheduledDate);
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const formattedDate = formatBookingDate(booking.scheduledDate);
 
   const getStatusColor = (status: BookingStatus) => {
     switch (status) {

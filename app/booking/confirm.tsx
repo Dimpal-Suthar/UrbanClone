@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { useService } from '@/hooks/useServices';
 import { BookingAddress, CreateBookingInput, TimeSlot } from '@/types';
+import { formatBookingDate } from '@/utils/dateHelpers';
 import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -58,8 +59,7 @@ export default function ConfirmBookingScreen() {
     lng: addressLng && addressLng !== '' ? parseFloat(addressLng as string) : null,
   };
 
-  const dateObj = new Date(scheduledDate as string);
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
+  const formattedDate = formatBookingDate(scheduledDate as string, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

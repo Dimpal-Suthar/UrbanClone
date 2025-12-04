@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useProviderBookings } from '@/hooks/useBookings';
 import { useProviderReviews } from '@/hooks/useReviews';
+import { parseLocalDate } from '@/utils/dateHelpers';
 import { useMemo } from 'react';
 
 interface ProviderStats {
@@ -22,7 +23,7 @@ export const useProviderStats = () => {
 
     // Today's bookings
     const todaysBookings = providerBookings.filter(booking => {
-      const bookingDate = new Date(booking.scheduledDate);
+      const bookingDate = parseLocalDate(booking.scheduledDate);
       bookingDate.setHours(0, 0, 0, 0);
       return bookingDate.getTime() === today.getTime();
     }).length;

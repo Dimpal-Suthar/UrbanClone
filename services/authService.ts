@@ -176,19 +176,43 @@ class AuthService {
   }
 
   /**
+   * Delete user account
+   */
+  async deleteAccount(): Promise<void> {
+    try {
+      const { functions } = await import('@/config/firebase');
+      const { httpsCallable } = await import('firebase/functions');
+      
+      const deleteAccountFunction = httpsCallable(functions, 'deleteAccount');
+      await deleteAccountFunction();
+      
+      // Note: No need to call signOut() here because the Cloud Function
+      // already deletes the user from Firebase Auth. We just need to clear
+      // local data, which is handled in AuthStore.
+    } catch (error: any) {
+      console.error('DeleteAccount error:', error.message);
+      throw this.handleAuthError(error);
+    }
+  }
+
+  /**
    * Sign out
    */
   async signOut(): Promise<void> {
     try {
-      // Remove all device tokens before signing out
+      // CRITICAL: Remove current device's tokens before signing out
+      // This prevents cross-user notifications while preserving tokens from other devices
       if (auth.currentUser?.uid) {
         const { removeAllDeviceTokens } = await import('@/services/fcmService');
         
         try {
-          await removeAllDeviceTokens(auth.currentUser.uid);
-          console.log('✅ All device tokens removed on logout');
+          // clearAllTokens = false removes only current device's tokens
+          // This preserves tokens from other devices where user is still logged in
+          await removeAllDeviceTokens(auth.currentUser.uid, false);
+          console.log('✅ Current device tokens removed on logout');
         } catch (tokenError) {
-          console.warn('Could not remove device tokens:', tokenError);
+          console.error('❌ Could not remove device tokens:', tokenError);
+          // Continue with logout even if token removal fails
         }
       }
       

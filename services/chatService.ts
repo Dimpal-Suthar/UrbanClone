@@ -77,7 +77,7 @@ export const getOrCreateConversation = async (
       throw new Error('Current user must be either customer or provider');
     }
 
-    // Check if conversation already exists
+    // Check if conversation already exists FIRST
     // IMPORTANT: Query by currentUserId to ensure security rules pass
     // Security rules check: request.auth.uid in resource.data.participants
     // So we must query by the current user's ID
@@ -97,27 +97,28 @@ export const getOrCreateConversation = async (
     });
 
     if (existingConv) {
-      // Fetch fresh user data to get updated names and photos
+      // For existing conversations, allow access even if users are deleted
+      // Try to fetch fresh user data, but use existing participantsData as fallback
       const [customerDoc, providerDoc] = await Promise.all([
-        getDoc(doc(db, 'users', input.customerId)),
-        getDoc(doc(db, 'users', input.providerId)),
+        getDoc(doc(db, 'users', input.customerId)).catch(() => null),
+        getDoc(doc(db, 'users', input.providerId)).catch(() => null),
       ]);
 
-      const customerData = customerDoc.exists() ? customerDoc.data() : {};
-      const providerData = providerDoc.exists() ? providerDoc.data() : {};
-
+      const customerData = customerDoc?.exists() ? customerDoc.data() : {};
+      const providerData = providerDoc?.exists() ? providerDoc.data() : {};
       const data = existingConv.data();
+      const existingParticipantsData = data.participantsData || {};
       
-      // Update with fresh participant data
+      // Update with fresh participant data, but keep existing data as fallback
       const updatedParticipantsData = {
         [input.customerId]: {
-          name: customerData.displayName || customerData.name || input.customerName,
-          photo: customerData.photoURL || customerData.photo || input.customerPhoto,
+          name: customerData.displayName || customerData.name || existingParticipantsData[input.customerId]?.name || input.customerName,
+          photo: customerData.photoURL || customerData.photo || existingParticipantsData[input.customerId]?.photo || input.customerPhoto,
           role: 'customer' as const,
         },
         [input.providerId]: {
-          name: providerData.displayName || providerData.name || input.providerName,
-          photo: providerData.photoURL || providerData.photo || input.providerPhoto,
+          name: providerData.displayName || providerData.name || existingParticipantsData[input.providerId]?.name || input.providerName,
+          photo: providerData.photoURL || providerData.photo || existingParticipantsData[input.providerId]?.photo || input.providerPhoto,
           role: 'provider' as const,
         },
       };
@@ -126,6 +127,20 @@ export const getOrCreateConversation = async (
         ...data,
         participantsData: updatedParticipantsData,
       });
+    }
+
+    // Only validate user existence when CREATING a new conversation
+    const [customerDoc, providerDoc] = await Promise.all([
+      getDoc(doc(db, 'users', input.customerId)),
+      getDoc(doc(db, 'users', input.providerId)),
+    ]);
+
+    if (!customerDoc.exists()) {
+      throw new Error('Customer account not found. The account may have been deleted.');
+    }
+
+    if (!providerDoc.exists()) {
+      throw new Error('Provider account not found. The account may have been deleted.');
     }
 
     // Create new conversation
@@ -229,12 +244,29 @@ export const getUserConversations = async (
     for (const docSnapshot of snapshot.docs) {
       const data = docSnapshot.data();
       const participantIds = data.participants || [];
+      const existingParticipantsData = data.participantsData || {};
       
-      // Build participants data from userMap
+      // Build participants data from userMap, with fallback to existing data
       const updatedParticipantsData: any = {};
       participantIds.forEach((participantId: string) => {
         if (userMap.has(participantId)) {
-          updatedParticipantsData[participantId] = userMap.get(participantId);
+          // Use fresh user data if available
+          const userData = userMap.get(participantId);
+          updatedParticipantsData[participantId] = {
+            name: userData.name,
+            photo: userData.photo,
+            role: userData.role,
+          };
+        } else if (existingParticipantsData[participantId]) {
+          // Use existing participantsData as fallback (for deleted users)
+          updatedParticipantsData[participantId] = existingParticipantsData[participantId];
+        } else {
+          // Last resort: use generic data
+          updatedParticipantsData[participantId] = {
+            name: 'User',
+            photo: null,
+            role: 'customer' as const,
+          };
         }
       });
       
@@ -430,6 +462,22 @@ export const setTypingStatus = async (
     });
   } catch (error) {
     console.error('Error updating typing status:', error);
+  }
+};
+
+/**
+ * Get a single conversation by ID
+ */
+export const getConversation = async (conversationId: string): Promise<Conversation | null> => {
+  try {
+    const conversationDoc = await getDoc(doc(db, 'conversations', conversationId));
+    if (!conversationDoc.exists()) {
+      return null;
+    }
+    return buildConversationFromDoc(conversationDoc.id, conversationDoc.data());
+  } catch (error) {
+    console.error('Error getting conversation:', error);
+    return null;
   }
 };
 

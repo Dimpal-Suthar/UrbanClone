@@ -49,6 +49,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           'This app needs access to location to show nearby services and track your location.',
         NSLocationAlwaysUsageDescription:
           'This app needs access to location in the background to provide real-time tracking during active bookings.',
+        NSCameraUsageDescription:
+          'ServiceSquad needs access to your camera to take photos for your profile picture and service listings. For example, you can take a photo of yourself for your profile or capture images of your work when providing services.',
+        NSPhotoLibraryUsageDescription:
+          'ServiceSquad needs access to your photo library to select images for your profile picture and service listings. For example, you can choose an existing photo from your gallery for your profile or upload images of your work.',
+        NSPhotoLibraryAddUsageDescription:
+          'ServiceSquad needs permission to save photos to your library. For example, you may want to save service completion photos or booking confirmations to your device.',
         LSApplicationQueriesSchemes: ['comgooglemaps', 'googlemaps', 'maps'],
       },
       googleServicesFile: './GoogleService-Info.plist',
@@ -64,7 +70,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: 'com.brilworks.servicesquad',
-      permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION'],
+      permissions: [
+        'ACCESS_FINE_LOCATION',
+        'ACCESS_COARSE_LOCATION',
+        'ACCESS_BACKGROUND_LOCATION',
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+      ],
       googleServicesFile: './google-services.json',
       config: {
         googleMaps: {

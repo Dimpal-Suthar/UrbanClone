@@ -389,11 +389,73 @@ export class AuthStore {
   }
 
   /**
+   * Delete account
+   */
+  async deleteAccount(): Promise<void> {
+    try {
+      runInAction(() => {
+        this.loading = true;
+        this.error = null;
+      });
+
+      // CRITICAL: Unsubscribe from profile listener FIRST
+      // This prevents the listener from creating a new default profile
+      // when the Cloud Function deletes the user document
+      if (this.profileUnsubscribe) {
+        this.profileUnsubscribe();
+        this.profileUnsubscribe = null;
+      }
+
+      await authService.deleteAccount();
+      
+      // Clear all stores and local storage
+      await this.clearAllData();
+
+      runInAction(() => {
+        this.user = null;
+        this.userProfile = null;
+        this.loading = false;
+      });
+    } catch (error: any) {
+      runInAction(() => {
+        this.error = getAuthErrorMessage(error);
+        this.loading = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all app data on logout/delete
+   */
+  private async clearAllData() {
+    try {
+      // 1. Clear AsyncStorage (except onboarding)
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter(key => key !== 'hasSeenOnboarding');
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      // 2. Clear React Query Cache (if accessible here, otherwise handle in hook)
+      // Note: React Query cache clearing is best done in the hook or a global reset function
+      
+      // 3. Reset other stores if needed
+      // Example: chatStore.reset(), bookingStore.reset()
+      // Since we don't have direct access to other stores here, we rely on them reacting to auth state or manual reset
+      
+      console.log('✅ App data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing app data:', error);
+    }
+  }
+
+  /**
    * Sign out
    */
   async signOut(): Promise<void> {
     try {
       await authService.signOut();
+      await this.clearAllData();
+      
       runInAction(() => {
         this.user = null;
         this.userProfile = null;

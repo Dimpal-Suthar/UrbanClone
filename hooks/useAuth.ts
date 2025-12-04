@@ -29,6 +29,7 @@ export const useAuth = () => {
     markOnboardingSeen: authStore.markOnboardingSeen.bind(authStore),
     isProfileComplete: authStore.isProfileComplete.bind(authStore),
     clearError: authStore.clearError.bind(authStore),
+    deleteAccount: authStore.deleteAccount.bind(authStore),
   };
 };
 

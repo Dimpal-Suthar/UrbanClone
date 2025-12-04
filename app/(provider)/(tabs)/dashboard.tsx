@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useProviderBookings } from '@/hooks/useBookings';
 import { useProviderStats } from '@/hooks/useProviderStats';
+import { parseLocalDate } from '@/utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -42,12 +43,19 @@ const ProviderDashboard = observer(() => {
       
       // Handle Firestore Timestamp
       if (scheduledDate?.toDate) {
-        return scheduledDate.toDate().toISOString().split('T')[0];
+        const date = scheduledDate.toDate();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       }
       
       // Handle Date object
       if (scheduledDate instanceof Date) {
-        return scheduledDate.toISOString().split('T')[0];
+        const year = scheduledDate.getFullYear();
+        const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+        const day = String(scheduledDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       }
       
       // Handle string (ISO format or date string)
@@ -60,9 +68,13 @@ const ProviderDashboard = observer(() => {
         if (scheduledDate.includes('T')) {
           return scheduledDate.split('T')[0];
         }
-        // Try to parse as date
+        // Try to parse as date (using local date parsing)
         try {
-          return new Date(scheduledDate).toISOString().split('T')[0];
+          const date = parseLocalDate(scheduledDate);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
         } catch {
           return '';
         }

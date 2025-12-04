@@ -245,12 +245,12 @@ export const removeFCMToken = async (
 };
 
 /**
- * Remove all device tokens for current device on logout or when notifications are disabled
- * Clears both deviceTokens array and fcmToken/apnsToken fields
+ * Remove current device's tokens for user
+ * CRITICAL: Only removes tokens for the current device, preserving tokens from other devices
  * 
  * @param userId - User ID
- * @param clearAllTokens - If true, clears ALL tokens for the user (for notification disable).
- *                        If false, only removes current device's tokens (for logout).
+ * @param clearAllTokens - If true, clears ALL tokens (for notification disable).
+ *                        If false (default), only removes current device's tokens (for logout).
  */
 export const removeAllDeviceTokens = async (userId: string, clearAllTokens: boolean = false): Promise<void> => {
   try {
@@ -276,7 +276,8 @@ export const removeAllDeviceTokens = async (userId: string, clearAllTokens: bool
         update.apnsToken = null;
         console.log('🔔 Clearing ALL tokens (notifications disabled)');
       } else {
-        // When logging out, only remove current device's tokens
+        // CRITICAL: On logout, only remove CURRENT device's tokens
+        // This preserves tokens from other devices where user is still logged in
         const expoToken = await getExpoPushToken();
         const nativeToken = await getNativePushToken();
         
@@ -292,17 +293,34 @@ export const removeAllDeviceTokens = async (userId: string, clearAllTokens: bool
 
         update.deviceTokens = updatedTokens.length > 0 ? updatedTokens : [];
         
-        // Clear native tokens if they match current device (best effort)
-        // Note: We can't reliably match native tokens, so we clear them if they exist
+        // Clear native tokens if they match current device
+        // Note: We clear native tokens if they exist (best effort approach)
         // This is safe because tokens will be re-registered on next login if needed
         if (data.fcmToken) {
-          update.fcmToken = null;
-          console.log('🔔 Clearing fcmToken field on logout:', data.fcmToken);
+          // If we have a native FCM token and it matches, clear it
+          // Otherwise, if we can't match, we still clear to prevent cross-user issues
+          if (nativeToken?.type === 'fcm') {
+            update.fcmToken = null;
+            console.log('🔔 Clearing fcmToken field (matches current device):', data.fcmToken);
+          } else {
+            // Clear FCM token even if we can't match (prevents cross-user notifications)
+            // User will re-register on next login
+            update.fcmToken = null;
+            console.log('🔔 Clearing fcmToken field (prevent cross-user):', data.fcmToken);
+          }
         }
         if (data.apnsToken) {
-          update.apnsToken = null;
-          console.log('🔔 Clearing apnsToken field on logout:', data.apnsToken);
+          // Same logic for APNs token
+          if (nativeToken?.type === 'apns') {
+            update.apnsToken = null;
+            console.log('🔔 Clearing apnsToken field (matches current device):', data.apnsToken);
+          } else {
+            update.apnsToken = null;
+            console.log('🔔 Clearing apnsToken field (prevent cross-user):', data.apnsToken);
+          }
         }
+        
+        console.log('🔔 Removing current device tokens (preserving other devices)');
       }
 
       console.log('🔔 Updating user document with:', update);

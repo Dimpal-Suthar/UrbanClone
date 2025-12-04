@@ -1,14 +1,17 @@
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { logger, setGlobalOptions } from 'firebase-functions/v2';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 setGlobalOptions({ region: 'us-central1', memory: '256MiB', timeoutSeconds: 60 });
 
 try { initializeApp(); } catch {}
 const db = getFirestore();
 const messaging = getMessaging();
+const auth = getAuth();
 
 /**
  * OPTIMIZED: Get all tokens for a user in a single read
@@ -353,3 +356,95 @@ export const onProviderServiceUpdated = onDocumentUpdated('providerServices/{ser
   }
 });
 
+
+/**
+ * Delete user account and cleanup data
+ * - Deletes user from Authentication
+ * - Deletes user profile from Firestore
+ * - Anonymizes/Deletes related data (bookings, reviews, etc.)
+ */
+export const deleteAccount = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const uid = request.auth.uid;
+  const batch = db.batch();
+
+  try {
+    // 1. Get user data to check role
+    const userSnap = await db.collection('users').doc(uid).get();
+    if (!userSnap.exists) {
+      // Just delete auth if user doc doesn't exist
+      try {
+        await auth.deleteUser(uid);
+      } catch (e) {
+        logger.warn('User not found in Auth during cleanup', e);
+      }
+      return { success: true, message: 'Account deleted (profile not found)' };
+    }
+    
+    const userData = userSnap.data() as any;
+    const role = userData.role;
+    logger.info(`Deleting account for user ${uid} with role ${role}`);
+
+    // 2. Cancel Active Bookings Only
+    // Find all ACTIVE bookings where user is customer or provider
+    const bookingsQuery = db.collection('bookings').where(
+      role === 'provider' ? 'providerId' : 'customerId', 
+      '==', 
+      uid
+    );
+    const bookingsSnap = await bookingsQuery.get();
+
+    bookingsSnap.docs.forEach(doc => {
+      const booking = doc.data();
+      const isActive = ['pending', 'accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(booking.status);
+      
+      if (isActive) {
+        // Cancel active bookings only
+        batch.update(doc.ref, {
+          status: 'cancelled',
+          cancellationReason: `${role === 'provider' ? 'Provider' : 'Customer'} account deleted`,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
+      // Past bookings (completed, cancelled, rejected) are left completely unchanged
+    });
+
+    // 3. Provider specific cleanup - Delete provider's own data
+    if (role === 'provider') {
+      // Delete provider profile
+      const providerRef = db.collection('providers').doc(uid);
+      const providerSnap = await providerRef.get();
+      if (providerSnap.exists) {
+        batch.delete(providerRef);
+      }
+      
+      // Delete services
+      const servicesSnap = await db.collection('providerServices').where('providerId', '==', uid).get();
+      servicesSnap.docs.forEach(doc => batch.delete(doc.ref));
+      
+      // Delete availability
+      const availabilitySnap = await db.collection('providerAvailability').where('providerId', '==', uid).get();
+      availabilitySnap.docs.forEach(doc => batch.delete(doc.ref));
+    }
+
+    // 4. Delete User Profile
+    batch.delete(db.collection('users').doc(uid));
+
+    // 5. Commit all changes
+    await batch.commit();
+    logger.info(`Batch commit completed for user ${uid}`);
+
+    // 6. Delete from Firebase Auth
+    await auth.deleteUser(uid);
+
+    logger.info(`Successfully deleted account for user ${uid}`);
+    return { success: true };
+
+  } catch (error) {
+    logger.error('Delete account error', error);
+    throw new HttpsError('internal', 'Failed to delete account');
+  }
+});

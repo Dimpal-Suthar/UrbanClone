@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAllBookings } from '@/hooks/useBookings';
+import { formatBookingDate } from '@/utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -73,8 +74,7 @@ const AdminBookingsScreen = observer(() => {
   };
 
   const formatDate = (date: Date | string) => {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatBookingDate(date);
   };
 
   const formatTime = (scheduledSlot?: string) => {
@@ -135,16 +135,16 @@ const AdminBookingsScreen = observer(() => {
           {/* Customer */}
           <View className="flex-row items-center">
             <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
-            <Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
-              Customer ID: {booking.customerId.slice(0, 8)}
+            <Text className="ml-2 text-sm" numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textSecondary }}>
+              Customer: {booking.customerName} ({booking?.customerId || '-'})
             </Text>
           </View>
 
           {/* Provider */}
           <View className="flex-row items-center">
             <Ionicons name="briefcase-outline" size={16} color={colors.textSecondary} />
-            <Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
-              Provider ID: {booking.providerId.slice(0, 8)}
+            <Text className="ml-2 text-sm" numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textSecondary }}>
+              Provider: {booking.providerName} ({booking?.providerId || '-'})
             </Text>
           </View>
 

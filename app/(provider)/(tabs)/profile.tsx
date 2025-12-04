@@ -1,3 +1,4 @@
+
 import { ThemeSettings } from '@/components/ThemeSettings';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
@@ -5,7 +6,7 @@ import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useProviderStats } from '@/hooks/useProviderStats';
-import { showInfoMessage } from '@/utils/toast';
+import { showInfoMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -23,8 +24,9 @@ const MENU_ITEMS = [
 const ProviderProfileScreen = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user, userProfile, signOut } = useAuth();
+  const { user, userProfile, signOut, deleteAccount } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { stats, isLoading } = useProviderStats();
 
   const handleLogout = () => {
@@ -46,6 +48,35 @@ const ProviderProfileScreen = observer(() => {
         },
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteAccount();
+              // No need to call signOut or router.replace here as auth listener will handle it
+              // But for safety/UX we can redirect
+              router.replace('/auth/email');
+              showSuccessMessage('Account Deleted', 'Your account has been successfully deleted.');
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleMenuPress = (screen: string) => {
@@ -177,8 +208,8 @@ const ProviderProfileScreen = observer(() => {
         <View className="px-6 mb-8">
           <Pressable
             onPress={handleLogout}
-            disabled={loggingOut}
-            className="rounded-xl py-4 items-center active:opacity-70"
+            disabled={loggingOut || deleting}
+            className="rounded-xl py-4 items-center active:opacity-70 mb-4"
             style={{ backgroundColor: `${colors.error}20`, opacity: loggingOut ? 0.5 : 1 }}
           >
             {loggingOut ? (
@@ -191,6 +222,17 @@ const ProviderProfileScreen = observer(() => {
                 </Text>
               </View>
             )}
+          </Pressable>
+
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={loggingOut || deleting}
+            className="items-center active:opacity-70"
+            style={{ opacity: deleting ? 0.5 : 1 }}
+          >
+            <Text className="text-sm font-semibold underline" style={{ color: colors.error }}>
+              {deleting ? 'Deleting...' : 'Delete Account'}
+            </Text>
           </Pressable>
         </View>
 

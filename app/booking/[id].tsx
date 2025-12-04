@@ -18,6 +18,7 @@ import { useCreateReview } from '@/hooks/useReviews';
 import { useUserProfile, useUserProfileRealtime } from '@/hooks/useUserProfile';
 import { BookingStatus } from '@/types';
 import { makeCall } from '@/utils/callHelpers';
+import { formatBookingDate } from '@/utils/dateHelpers';
 import { showFailedMessage, showSuccessMessage, showWarningMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
@@ -260,21 +261,43 @@ export default function BookingDetailScreen() {
   const handleMessageProvider = async () => {
     if (!booking || !user) return;
 
+    // Validate booking data
+    if (!booking.customerId || !booking.providerId) {
+      showFailedMessage('Error', 'Invalid booking data. Cannot start chat.');
+      return;
+    }
+
     try {
+      // Try to get or create conversation
+      // This will return existing conversation even if user is deleted
+      // Or create new one if both users exist
       const conversation = await createConversationMutation.mutateAsync({
         customerId: booking.customerId,
         providerId: booking.providerId,
-        customerName: customer.name,
+        customerName: customer.name || 'Customer',
         customerPhoto: customer.photo,
-        providerName: provider.name,
+        providerName: provider.name || 'Provider',
         providerPhoto: provider.photo,
         bookingId: booking.id,
       });
 
       router.push(`/chat/${conversation.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating conversation:', error);
-      showFailedMessage('Error', 'Failed to open chat. Please try again.');
+      
+      // Handle specific error messages
+      const errorMessage = error?.message || 'Failed to open chat. Please try again.';
+      
+      if (errorMessage.includes('not found') || errorMessage.includes('deleted')) {
+        showFailedMessage(
+          'Cannot Start New Chat',
+          'The other user\'s account has been deleted. You can still view existing conversations in Messages.'
+        );
+      } else if (errorMessage.includes('must be either')) {
+        showFailedMessage('Error', 'You are not authorized to start this chat.');
+      } else {
+        showFailedMessage('Error', errorMessage);
+      }
     }
   };
 
@@ -380,8 +403,7 @@ export default function BookingDetailScreen() {
     );
   }
 
-  const dateObj = new Date(booking.scheduledDate);
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
+  const formattedDate = formatBookingDate(booking.scheduledDate, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
