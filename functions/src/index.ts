@@ -388,31 +388,33 @@ export const deleteAccount = onCall(async (request) => {
     const role = userData.role;
     logger.info(`Deleting account for user ${uid} with role ${role}`);
 
-    // 2. Cancel Active Bookings Only
-    // Find all ACTIVE bookings where user is customer or provider
-    const bookingsQuery = db.collection('bookings').where(
-      role === 'provider' ? 'providerId' : 'customerId', 
-      '==', 
-      uid
-    );
-    const bookingsSnap = await bookingsQuery.get();
+    // 2. Cancel Active Bookings Only (skip for admin - admin has no bookings)
+    if (role !== 'admin') {
+      // Find all ACTIVE bookings where user is customer or provider
+      const bookingsQuery = db.collection('bookings').where(
+        role === 'provider' ? 'providerId' : 'customerId', 
+        '==', 
+        uid
+      );
+      const bookingsSnap = await bookingsQuery.get();
 
-    bookingsSnap.docs.forEach(doc => {
-      const booking = doc.data();
-      const isActive = ['pending', 'accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(booking.status);
-      
-      if (isActive) {
-        // Cancel active bookings only
-        batch.update(doc.ref, {
-          status: 'cancelled',
-          cancellationReason: `${role === 'provider' ? 'Provider' : 'Customer'} account deleted`,
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      }
-      // Past bookings (completed, cancelled, rejected) are left completely unchanged
-    });
+      bookingsSnap.docs.forEach(doc => {
+        const booking = doc.data();
+        const isActive = ['pending', 'accepted', 'confirmed', 'on-the-way', 'in-progress'].includes(booking.status);
+        
+        if (isActive) {
+          // Cancel active bookings only
+          batch.update(doc.ref, {
+            status: 'cancelled',
+            cancellationReason: `${role === 'provider' ? 'Provider' : 'Customer'} account deleted`,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        }
+        // Past bookings (completed, cancelled, rejected) are left completely unchanged
+      });
+    }
 
-    // 3. Provider specific cleanup - Delete provider's own data
+    // 3. Provider specific cleanup - Delete provider's own data (skip for admin)
     if (role === 'provider') {
       // Delete provider profile
       const providerRef = db.collection('providers').doc(uid);
@@ -421,7 +423,7 @@ export const deleteAccount = onCall(async (request) => {
         batch.delete(providerRef);
       }
       
-      // Delete services
+      // Delete provider's services (from providerServices collection)
       const servicesSnap = await db.collection('providerServices').where('providerId', '==', uid).get();
       servicesSnap.docs.forEach(doc => batch.delete(doc.ref));
       
@@ -429,6 +431,10 @@ export const deleteAccount = onCall(async (request) => {
       const availabilitySnap = await db.collection('providerAvailability').where('providerId', '==', uid).get();
       availabilitySnap.docs.forEach(doc => batch.delete(doc.ref));
     }
+
+    // Note: Admin-created services in 'services' collection are NOT deleted
+    // Services are global and not tied to a specific admin. They remain available
+    // for all users even if the admin who created them is deleted.
 
     // 4. Delete User Profile
     batch.delete(db.collection('users').doc(uid));

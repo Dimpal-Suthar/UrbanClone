@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { showFailedMessage } from '@/utils/toast';
+import { showFailedMessage, showSuccessMessage } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -14,8 +14,9 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 const AdminSettings = observer(() => {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user, userProfile, signOut } = useAuth();
+  const { user, userProfile, signOut, deleteAccount } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleLogout = () => {
     // Keep Alert for critical logout confirmation
@@ -38,6 +39,33 @@ const AdminSettings = observer(() => {
         },
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your admin account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteAccount();
+              router.replace('/auth/email');
+              showSuccessMessage('Account Deleted', 'Your admin account has been successfully deleted.');
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const displayName = userProfile?.displayName || user?.displayName || 'Admin';
@@ -177,12 +205,12 @@ const AdminSettings = observer(() => {
         </View>
 
         {/* Logout Button */}
-        <View className="px-6 mb-8">
+        <View className="px-6 mb-4">
           <Pressable
             onPress={handleLogout}
-            disabled={loggingOut}
+            disabled={loggingOut || deleting}
             className="rounded-xl py-4 items-center active:opacity-70"
-            style={{ backgroundColor: `${colors.error}20`, opacity: loggingOut ? 0.5 : 1 }}
+            style={{ backgroundColor: `${colors.error}20`, opacity: loggingOut || deleting ? 0.5 : 1 }}
           >
             {loggingOut ? (
               <ActivityIndicator size="small" color={colors.error} />
@@ -194,6 +222,20 @@ const AdminSettings = observer(() => {
                 </Text>
               </View>
             )}
+          </Pressable>
+        </View>
+
+        {/* Delete Account Button */}
+        <View className="px-6 mb-8">
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={loggingOut || deleting}
+            className="items-center active:opacity-70"
+            style={{ opacity: deleting ? 0.5 : 1 }}
+          >
+            <Text className="text-sm font-semibold underline" style={{ color: colors.error }}>
+              {deleting ? 'Deleting...' : 'Delete Account'}
+            </Text>
           </Pressable>
         </View>
 
